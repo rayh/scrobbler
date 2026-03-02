@@ -2,7 +2,7 @@
   "client_id": "https://rayh.github.io/scrobbler/client-metadata.json",
   "client_name": "Scrobbled AT",
   "client_uri": "https://github.com/rayh/scrobbler",
-  "redirect_uris": ["scrobbledat://oauth/callback"],
+  "redirect_uris": ["http://127.0.0.1/callback"],
   "scope": "atproto transition:generic",
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
