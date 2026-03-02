@@ -3,7 +3,7 @@
     "client_name": "Scrobbled AT",
     "client_uri": "https://rayh.github.io/scrobbler/",
     "redirect_uris": [
-        "com.scrobbledat.app:/oauth/callback"
+        "io.github.rayh:/oauth/callback"
     ],
     "scope": "atproto transition:generic",
     "grant_types": [
