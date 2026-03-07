@@ -1,0 +1,42 @@
+{
+  "originHash" : "43e7ebd5e303daef01a5f2724aac7c26fa321a5dd8fe3aa229ca3d4136e6475d",
+  "pins" : [
+    {
+      "identity" : "jot",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mattmassicotte/Jot.git",
+      "state" : {
+        "revision" : "0826782b0489dc76249b5def7d69f38684e5cb7f",
+        "version" : "0.1.1"
+      }
+    },
+    {
+      "identity" : "oauthenticator",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ChimeHQ/OAuthenticator.git",
+      "state" : {
+        "revision" : "835bc01596dfba77de92acfecf82c6f65105cb2d",
+        "version" : "0.7.2"
+      }
+    },
+    {
+      "identity" : "plcrashreporter",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/microsoft/plcrashreporter.git",
+      "state" : {
+        "revision" : "0254f941c646b1ed17b243654723d0f071e990d0",
+        "version" : "1.12.2"
+      }
+    },
+    {
+      "identity" : "posthog-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/PostHog/posthog-ios.git",
+      "state" : {
+        "revision" : "5125a065538c4b2d7069933bd8f80e96ded9d677",
+        "version" : "3.45.0"
+      }
+    }
+  ],
+  "version" : 3
+}

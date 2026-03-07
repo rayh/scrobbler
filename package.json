@@ -1,0 +1,27 @@
+{
+  "name": "scrobbled-at",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "sst dev",
+    "deploy": "sst deploy",
+    "remove": "sst remove",
+    "console": "sst console",
+    "typecheck": "tsc --noEmit",
+    "test": "node test-api.cjs",
+    "test:smoke": "node smoke-test.cjs",
+    "test:config": "node get-test-config.cjs",
+    "seed": "AWS_PROFILE=scrobbler npx sst shell -- node seed-data.mjs",
+    "seed:clear": "AWS_PROFILE=scrobbler npx sst shell -- node clear-data.mjs",
+    "push:test": "AWS_PROFILE=scrobbler npx sst shell -- node send-test-push.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "sst": "^4.1.10",
+    "typescript": "^5.3.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
