@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>slctr — open in app</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0a0a0a;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+      gap: 1rem;
+    }
+    .avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, #4f8ef7, #9b5de5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; font-weight: 700; color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; }
+    .handle { color: #888; font-size: 1rem; margin-bottom: 1rem; }
+    .open-btn {
+      display: inline-block;
+      background: #fff;
+      color: #000;
+      padding: 0.75rem 1.75rem;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      margin-bottom: 0.5rem;
+    }
+    .download-link { color: #666; font-size: 0.875rem; text-decoration: underline; cursor: pointer; }
+    .logo { position: fixed; bottom: 1.5rem; font-size: 1rem; font-weight: 800; letter-spacing: -0.04em; color: #444; }
+  </style>
+</head>
+<body>
+  <div class="avatar" id="avatar">?</div>
+  <h1 id="name">Loading...</h1>
+  <p class="handle" id="handle"></p>
+  <a class="open-btn" id="open-btn" href="#">Open in slctr</a>
+  <a class="download-link" href="https://apps.apple.com/app/slctr/id0000000000">
+    Don't have the app? Download it free
+  </a>
+  <div class="logo">slctr</div>
+
+  <script>
+    const handle = window.location.pathname.split('/u/')[1]?.split('/')[0] || '';
+    // SLCTR_API_URL is replaced at deploy time by sst.aws.StaticSite's environment substitution.
+    // Falls back to prod URL for local development.
+    const API = typeof SLCTR_API_URL !== 'undefined' ? SLCTR_API_URL : 'https://api.slctr.io';
+
+    document.getElementById('open-btn').href = `slctr://profile/${handle}`;
+
+    // Attempt to open the app immediately on mobile
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      setTimeout(() => { window.location = `slctr://profile/${handle}`; }, 300);
+    }
+
+    // Fetch and render the profile
+    fetch(`${API}/users/${handle}`)
+      .then(r => r.json())
+      .then(data => {
+        const name = data.name || handle;
+        document.getElementById('name').textContent = name;
+        document.getElementById('handle').textContent = `@${handle}`;
+        document.title = `${name} on slctr`;
+        const initial = name[0]?.toUpperCase() || '?';
+        document.getElementById('avatar').textContent = initial;
+        if (data.avatarUrl) {
+          const img = document.createElement('img');
+          img.src = data.avatarUrl;
+          img.style.cssText = 'width:80px;height:80px;border-radius:50%;object-fit:cover;';
+          document.getElementById('avatar').replaceWith(img);
+        }
+      })
+      .catch(() => {
+        document.getElementById('name').textContent = handle;
+        document.getElementById('handle').textContent = `@${handle}`;
+      });
+  </script>
+</body>
+</html>

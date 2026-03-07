@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["A8G8PC6Q6K.net.wirestorm.scrobbler"],
+        "components": [
+          {
+            "/": "/u/*",
+            "comment": "User profile invite links"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["A8G8PC6Q6K.net.wirestorm.scrobbler"]
+  }
+}

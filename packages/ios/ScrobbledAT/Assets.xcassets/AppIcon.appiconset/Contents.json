@@ -1,0 +1,14 @@
+{
+  "images" : [
+    {
+      "filename" : "Lucid_Origin_A_modern_image_with_a_solid_background_vibrant_co_0.jpg",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
