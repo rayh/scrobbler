@@ -8,7 +8,6 @@ export default $config({
       home: "aws",
       providers: {
         aws: {
-          profile: "scrobbler",
           region: "eu-west-1",
         },
       },
