@@ -1,0 +1,118 @@
+name: PR Environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: pr-env-${{ github.event.pull_request.number }}
+  cancel-in-progress: false  # let deploy/remove finish cleanly
+
+jobs:
+  deploy:
+    name: Deploy PR environment
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    environment: pr-preview
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write   # to post the environment URL as a comment
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Deploy PR stage
+        id: deploy
+        run: npx sst deploy --stage pr-${{ github.event.pull_request.number }}
+
+      - name: Comment PR with environment URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const stage = `pr-${{ github.event.pull_request.number }}`;
+            const siteUrl = `https://${stage}.slctr.io`;
+            const apiUrl  = `https://api-${stage}.slctr.io`;
+            const body = [
+              `### Preview environment deployed`,
+              `| | URL |`,
+              `|---|---|`,
+              `| Site | ${siteUrl} |`,
+              `| API  | ${apiUrl} |`,
+              ``,
+              `Stage: \`${stage}\``,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Preview environment deployed')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  remove:
+    name: Remove PR environment
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Remove PR stage
+        run: npx sst remove --stage pr-${{ github.event.pull_request.number }}

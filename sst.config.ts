@@ -398,6 +398,14 @@ export default $config({
       ],
     }, { auth });
 
+    api.route("DELETE /music/post", {
+      handler: "packages/functions/src/music.deletePost",
+      environment: { TABLE_NAME: table.name },
+      permissions: [
+        { actions: ["dynamodb:Query", "dynamodb:DeleteItem"], resources: [table.arn] },
+      ],
+    }, { auth });
+
     api.route("POST /follow", {
       handler: "packages/functions/src/social.follow",
       environment: { TABLE_NAME: table.name },

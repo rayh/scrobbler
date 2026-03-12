@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct FeedView: View {
     @EnvironmentObject var feedService: FeedService
@@ -86,6 +87,9 @@ struct FeedView: View {
 struct FeedPostCell: View {
     let group: FeedService.FeedGroup
     var showUser: Bool = true
+    /// When true, the like and repost buttons are hidden regardless of ownership.
+    /// Use this when rendering in a profile context where actions don't make sense.
+    var hideActions: Bool = false
 
     @EnvironmentObject var feedService: FeedService
     @EnvironmentObject var appSettings: AppSettings
@@ -93,13 +97,17 @@ struct FeedPostCell: View {
     @State private var isLiked = false
     @State private var likeCount: Int
     @State private var isLiking = false
+    @State private var isReposted = false
+    @State private var isReposting = false
     @State private var navigateToHandle: String? = nil
     @State private var showMusicAppPicker = false
     @State private var showRepostConfirmation = false
+    @State private var showRepostVoiceSheet = false
 
-    init(group: FeedService.FeedGroup, showUser: Bool = true) {
+    init(group: FeedService.FeedGroup, showUser: Bool = true, hideActions: Bool = false) {
         self.group = group
         self.showUser = showUser
+        self.hideActions = hideActions
         _likeCount = State(initialValue: group.likes)
     }
 
@@ -302,61 +310,82 @@ struct FeedPostCell: View {
 
     // MARK: - Action row (heart + repost + time)
 
-    /// True when the current user has already shared this track (hide repost).
+    /// True when the current user is the OG author (first sharer) — hide like + repost.
+    /// Reposters are NOT considered own posts: they still need the button to undo the repost.
     private var isOwnPost: Bool {
         guard let myHandle = appleSignInService.currentUser?.handle else { return false }
-        return group.sharedBy.contains { $0.userHandle == myHandle }
+        return group.sharedBy.first?.userHandle == myHandle
     }
+
+    /// True when actions should be hidden — either forced by caller or this is an own post.
+    private var shouldHideActions: Bool { hideActions || isOwnPost }
 
     private var actionRow: some View {
         HStack(spacing: 16) {
-            // Like button
-            Button {
-                guard !isLiking, let postId = primarySharer?.postId,
-                      let ownerId = primarySharer?.userId else { return }
-                isLiked.toggle()
-                likeCount += isLiked ? 1 : -1
-                isLiking = true
-                Task {
-                    defer { isLiking = false }
-                    let result = await feedService.likePost(
-                        postId: postId,
-                        postOwnerId: ownerId,
-                        isCurrentlyLiked: isLiked
-                    )
-                    if let liked = result {
-                        if liked != isLiked {
-                            isLiked = liked
-                            likeCount += liked ? 1 : -1
+            if !shouldHideActions {
+                // Like button
+                Button {
+                    guard !isLiking, let postId = primarySharer?.postId,
+                          let ownerId = primarySharer?.userId else { return }
+                    // Capture pre-toggle state before flipping
+                    let wasLiked = isLiked
+                    isLiked.toggle()
+                    likeCount += isLiked ? 1 : -1
+                    isLiking = true
+                    Task {
+                        defer { isLiking = false }
+                        // Pass the PRE-toggle state so the service sends the right action
+                        let result = await feedService.likePost(
+                            postId: postId,
+                            postOwnerId: ownerId,
+                            isCurrentlyLiked: wasLiked
+                        )
+                        if let liked = result {
+                            if liked != isLiked {
+                                isLiked = liked
+                                likeCount += liked ? 1 : -1
+                            }
+                        } else {
+                            // Revert optimistic update on failure
+                            isLiked.toggle()
+                            likeCount += isLiked ? 1 : -1
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: isLiked ? "heart.fill" : "heart")
+                            .foregroundColor(isLiked ? .red : .secondary)
+                        if likeCount > 0 {
+                            Text("\(likeCount)")
+                                .font(.subheadline).foregroundColor(.secondary)
+                        }
+                    }
+                    .frame(minWidth: 44, minHeight: 36)
+                }
+                .buttonStyle(.plain)
+
+                // Repost button — highlighted when reposted, tapping again undoes it
+                Button {
+                    if isReposted {
+                        // Undo repost — directly delete without confirmation
+                        guard !isReposting, let postId = primarySharer?.postId else { return }
+                        isReposted = false
+                        isReposting = true
+                        Task {
+                            defer { isReposting = false }
+                            let ok = await feedService.deletePost(postId: postId)
+                            if !ok { isReposted = true } // revert on failure
                         }
                     } else {
-                        isLiked.toggle()
-                        likeCount += isLiked ? 1 : -1
+                        showRepostConfirmation = true
                     }
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: isLiked ? "heart.fill" : "heart")
-                        .foregroundColor(isLiked ? .red : .secondary)
-                    if likeCount > 0 {
-                        Text("\(likeCount)")
-                            .font(.subheadline).foregroundColor(.secondary)
-                    }
-                }
-                .frame(minWidth: 44, minHeight: 36)
-            }
-            .buttonStyle(.plain)
-
-            // Repost button — hidden on own posts
-            if !isOwnPost {
-                Button {
-                    showRepostConfirmation = true
                 } label: {
-                    Image(systemName: "arrow.2.squarepath")
-                        .foregroundColor(.secondary)
+                    Image(systemName: isReposted ? "arrow.2.squarepath" : "arrow.2.squarepath")
+                        .foregroundColor(isReposted ? .green : .secondary)
                         .frame(minWidth: 44, minHeight: 36)
                 }
                 .buttonStyle(.plain)
+                .disabled(isReposting)
             }
 
             Spacer()
@@ -376,14 +405,47 @@ struct FeedPostCell: View {
         }
         .confirmationDialog("Repost", isPresented: $showRepostConfirmation, titleVisibility: .visible) {
             Button("Repost Now") {
-                // TODO: call repost API
+                guard !isReposting, let postId = primarySharer?.postId,
+                      let ownerId = primarySharer?.userId else { return }
+                isReposted = true
+                isReposting = true
+                Task {
+                    defer { isReposting = false }
+                    let ok = await feedService.repost(
+                        postId: postId,
+                        postOwnerId: ownerId,
+                        trackKey: group.trackKey ?? "",
+                        track: group.track
+                    )
+                    if !ok { isReposted = false }
+                }
             }
             Button("Repost with Voice Note") {
-                // TODO: open voice note recording modal
+                showRepostVoiceSheet = true
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Share \"\(group.track.title)\" with your followers.")
+        }
+        .sheet(isPresented: $showRepostVoiceSheet) {
+            RepostVoiceNoteView(group: group) { voiceMemoData, transcript in
+                guard let postId = primarySharer?.postId,
+                      let ownerId = primarySharer?.userId else { return }
+                isReposted = true
+                isReposting = true
+                Task {
+                    defer { isReposting = false }
+                    let ok = await feedService.repost(
+                        postId: postId,
+                        postOwnerId: ownerId,
+                        trackKey: group.trackKey ?? "",
+                        track: group.track,
+                        voiceMemoData: voiceMemoData,
+                        transcript: transcript
+                    )
+                    if !ok { isReposted = false }
+                }
+            }
         }
     }
 
@@ -415,7 +477,10 @@ struct FeedPostCell: View {
 
     private func timeAgo(from dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return "" }
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = formatter.date(from: dateString)
+            ?? ISO8601DateFormatter().date(from: dateString) // fallback without fractional seconds
+        guard let date else { return "" }
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated
         return relative.localizedString(for: date, relativeTo: Date())
@@ -424,3 +489,188 @@ struct FeedPostCell: View {
 
 // Keep typealias so any remaining references compile
 typealias RichFeedPostView = FeedPostCell
+
+// MARK: - RepostVoiceNoteView
+
+/// Lightweight voice-note recorder modal for reposting with a voice intro.
+struct RepostVoiceNoteView: View {
+    let group: FeedService.FeedGroup
+    let onComplete: (Data?, String?) -> Void
+
+    @StateObject private var recorder = VoiceMemoRecorder()
+    @State private var isPlayingBack = false
+    @State private var audioPlayer: AVAudioPlayer?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+
+                    // Track info
+                    HStack(spacing: 14) {
+                        Group {
+                            if let artwork = group.track.artwork, let url = URL(string: artwork) {
+                                AsyncImage(url: url) { phase in
+                                    if case .success(let img) = phase {
+                                        img.resizable().aspectRatio(contentMode: .fill)
+                                    } else {
+                                        Color(.systemGray5)
+                                    }
+                                }
+                            } else {
+                                Color(.systemGray5)
+                                    .overlay(Image(systemName: "music.note").foregroundColor(.secondary))
+                            }
+                        }
+                        .frame(width: 64, height: 64)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(group.track.title).font(.headline).lineLimit(1)
+                            Text(group.track.artist).font(.subheadline).foregroundColor(.secondary).lineLimit(1)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
+                    Divider()
+
+                    // Recorder
+                    VStack(spacing: 16) {
+                        Text("Add a voice intro")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+
+                        if recorder.recordedData == nil {
+                            VStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(recorder.isRecording ? Color.red : Color.accentColor)
+                                        .frame(width: 80, height: 80)
+                                        .scaleEffect(recorder.isRecording ? 1.15 : 1.0)
+                                        .animation(.easeInOut(duration: 0.15), value: recorder.isRecording)
+                                    Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
+                                        .font(.system(size: 28))
+                                        .foregroundColor(.white)
+                                }
+                                .gesture(
+                                    DragGesture(minimumDistance: 0)
+                                        .onChanged { _ in
+                                            if !recorder.isRecording { recorder.startRecording() }
+                                        }
+                                        .onEnded { _ in
+                                            if recorder.isRecording { recorder.stopRecording() }
+                                        }
+                                )
+
+                                if recorder.isRecording {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "waveform")
+                                            .foregroundColor(.red)
+                                            .symbolEffect(.pulse)
+                                        Text("Recording… release to stop (10s max)")
+                                            .font(.caption).foregroundColor(.red)
+                                    }
+                                } else {
+                                    Text("Hold to record · 10 seconds max")
+                                        .font(.caption).foregroundColor(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .padding(.horizontal)
+
+                        } else {
+                            // Recorded state
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                                    Text("Intro recorded").font(.subheadline).fontWeight(.medium)
+                                    Spacer()
+                                    Button {
+                                        audioPlayer?.stop(); audioPlayer = nil
+                                        isPlayingBack = false
+                                        recorder.clearRecording()
+                                    } label: {
+                                        Image(systemName: "trash").foregroundColor(.red)
+                                    }
+                                }
+                                if !recorder.transcript.isEmpty {
+                                    Text("\"\(recorder.transcript)\"")
+                                        .font(.footnote).foregroundColor(.secondary).italic().lineLimit(3)
+                                }
+                                HStack(spacing: 12) {
+                                    Button { togglePlayback() } label: {
+                                        Label(isPlayingBack ? "Stop" : "Play",
+                                              systemImage: isPlayingBack ? "stop.circle" : "play.circle")
+                                            .font(.subheadline).fontWeight(.medium)
+                                    }
+                                    .buttonStyle(.bordered)
+
+                                    Button {
+                                        audioPlayer?.stop(); audioPlayer = nil
+                                        isPlayingBack = false
+                                        recorder.clearRecording()
+                                    } label: {
+                                        Label("Re-record", systemImage: "arrow.counterclockwise")
+                                            .font(.subheadline)
+                                    }
+                                    .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(16)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .padding(.horizontal)
+                        }
+
+                        if let err = recorder.error {
+                            Text(err).font(.caption).foregroundColor(.red).padding(.horizontal)
+                        }
+                    }
+                }
+                .padding(.bottom, 32)
+            }
+            .navigationTitle("Repost with Voice")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Repost") {
+                        let data = recorder.recordedData
+                        let transcript = recorder.transcript.isEmpty ? nil : recorder.transcript
+                        dismiss()
+                        onComplete(data, transcript)
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(recorder.isRecording)
+                }
+            }
+        }
+    }
+
+    private func togglePlayback() {
+        guard let data = recorder.recordedData else { return }
+        if isPlayingBack {
+            audioPlayer?.stop(); audioPlayer = nil; isPlayingBack = false
+        } else {
+            do {
+                audioPlayer = try AVAudioPlayer(data: data)
+                audioPlayer?.play()
+                isPlayingBack = true
+                Task {
+                    let duration = audioPlayer?.duration ?? 0
+                    try? await Task.sleep(for: .seconds(duration + 0.1))
+                    isPlayingBack = false
+                }
+            } catch { isPlayingBack = false }
+        }
+    }
+}

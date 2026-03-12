@@ -2,6 +2,14 @@ import Foundation
 import AVFoundation
 import Speech
 
+/// Simple reference box so the tap closure and stopEngine() share the same AVAudioFile slot.
+/// Nilling box.value from the main actor closes/flushes the file; the tap closure checks the
+/// same slot and safely writes nothing after it's been cleared.
+private final class AudioFileBox {
+    nonisolated(unsafe) var value: AVAudioFile?
+    init(_ file: AVAudioFile?) { value = file }
+}
+
 @MainActor
 class VoiceMemoRecorder: NSObject, ObservableObject {
     @Published var isRecording = false
@@ -13,12 +21,15 @@ class VoiceMemoRecorder: NSObject, ObservableObject {
     private let maxRecordingDuration: TimeInterval = 10  // hard cap
     private var audioEngine: AVAudioEngine?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var audioFileBox: AudioFileBox?
+
     private var recognitionTask: SFSpeechRecognitionTask?
     private let recognizer = SFSpeechRecognizer(locale: Locale.current)
 
-    // Temp file for captured audio
-    private var audioFile: AVAudioFile?
     private var tempFileURL: URL?
+
+    // Guard against double-stop: recognition callback and stopRecording() racing each other
+    private var engineStopped = false
 
     static func hasPermissions() async -> Bool {
         let mic = AVAudioApplication.shared.recordPermission
@@ -26,16 +37,30 @@ class VoiceMemoRecorder: NSObject, ObservableObject {
             return await AVAudioApplication.requestRecordPermission()
         }
         guard mic == .granted else { return false }
-        return await withCheckedContinuation { cont in
-            SFSpeechRecognizer.requestAuthorization { status in
-                cont.resume(returning: status == .authorized)
+        // SFSpeechRecognizer.requestAuthorization calls back on a background thread.
+        // Task.detached avoids the MainActor executor assertion crash on iOS 26.
+        return await Task.detached {
+            await withCheckedContinuation { cont in
+                SFSpeechRecognizer.requestAuthorization { status in
+                    cont.resume(returning: status == .authorized)
+                }
             }
-        }
+        }.value
     }
 
     func startRecording() {
         guard !isRecording else { return }
-        transcript = ""; error = nil; recordedData = nil
+        transcript = ""; error = nil; recordedData = nil; engineStopped = false
+
+        // Configure AVAudioSession for recording
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            try session.setActive(true)
+        } catch {
+            self.error = "Could not configure audio session: \(error.localizedDescription)"
+            return
+        }
 
         let engine = AVAudioEngine()
         let request = SFSpeechAudioBufferRecognitionRequest()
@@ -50,11 +75,19 @@ class VoiceMemoRecorder: NSObject, ObservableObject {
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("caf")
         tempFileURL = tmp
-        audioFile = try? AVAudioFile(forWriting: tmp, settings: format.settings)
+        let file = try? AVAudioFile(forWriting: tmp, settings: format.settings)
+        let box = AudioFileBox(file)
+        audioFileBox = box
 
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.recognitionRequest?.append(buffer)
-            try? self?.audioFile?.write(from: buffer)
+        // Capture request and box as nonisolated locals so the realtime audio thread
+        // never touches `self` (a @MainActor object). SFSpeechAudioBufferRecognitionRequest
+        // .append is thread-safe; box.value write is safe because stopEngine() only nils it
+        // after removeTap() returns, guaranteeing the tap won't fire again.
+        nonisolated(unsafe) let tapRequest = request
+        nonisolated(unsafe) let tapBox = box
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+            tapRequest.append(buffer)
+            try? tapBox.value?.write(from: buffer)
         }
 
         recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
@@ -64,7 +97,10 @@ class VoiceMemoRecorder: NSObject, ObservableObject {
             }
             if error != nil || result?.isFinal == true {
                 Task { @MainActor in
-                    self.stopEngine()
+                    // Only clean up if stopRecording() hasn't already done it
+                    if !self.engineStopped {
+                        self.stopEngine()
+                    }
                     self.isRecording = false
                     self.isTranscribing = false
                 }
@@ -89,10 +125,10 @@ class VoiceMemoRecorder: NSObject, ObservableObject {
 
     func stopRecording() {
         guard isRecording else { return }
-        recognitionRequest?.endAudio()
-        stopEngine()
         isRecording = false
         isTranscribing = !transcript.isEmpty
+        recognitionRequest?.endAudio()
+        stopEngine()
         convertAndCapture()
     }
 
@@ -109,12 +145,17 @@ class VoiceMemoRecorder: NSObject, ObservableObject {
     // MARK: - Private
 
     private func stopEngine() {
+        guard !engineStopped else { return }
+        engineStopped = true
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioEngine?.stop()
-        audioFile = nil   // flush/close the file
+        audioFileBox?.value = nil   // flush/close the file
+        audioFileBox = nil
         audioEngine = nil
         recognitionRequest = nil
+        recognitionTask?.cancel()
         recognitionTask = nil
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     /// Convert the captured CAF file to M4A (AAC) and store in recordedData.

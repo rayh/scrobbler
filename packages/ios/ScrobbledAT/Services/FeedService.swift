@@ -176,6 +176,73 @@ class FeedService: ObservableObject {
         }
     }
 
+    // ── Repost ────────────────────────────────────────────────────────────────
+
+    /// Repost a track by calling the share endpoint with the same track data.
+    /// Returns true on success.
+    func repost(postId: String, postOwnerId: String, trackKey: String, track: FeedGroup.TrackInfo,
+                voiceMemoData: Data? = nil, transcript: String? = nil) async -> Bool {
+        guard let url = URL(string: "\(apiBaseUrl)/music/share") else { return false }
+        guard let idToken = KeychainService.shared.get(key: "idToken") else { return false }
+
+        // Upload voice memo if present
+        var voiceMemoUrl: String? = nil
+        if let audioData = voiceMemoData {
+            voiceMemoUrl = await UploadService.shared.uploadVoiceMemo(audioData, idToken: idToken)
+        }
+
+        let trackBody: [String: Any] = [
+            "title": track.title,
+            "artist": track.artist,
+            "album": track.album as Any,
+            "artwork": track.artwork as Any,
+            "appleMusicUrl": track.appleMusicUrl as Any,
+        ]
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+            var body: [String: Any] = [
+                "track": trackBody,
+                "tags": [String](),
+                "repostOf": postId,
+            ]
+            if let url = voiceMemoUrl { body["voiceMemoUrl"] = url }
+            if let t = transcript { body["transcript"] = t }
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (_, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  http.statusCode == 200 || http.statusCode == 409 else { return false }
+            return true
+        } catch {
+            print("❌ Repost failed: \(error)")
+            return false
+        }
+    }
+
+    // ── Delete post ───────────────────────────────────────────────────────────
+
+    /// Delete own post. Returns true on success.
+    func deletePost(postId: String) async -> Bool {
+        guard let url = URL(string: "\(apiBaseUrl)/music/post") else { return false }
+        guard let idToken = KeychainService.shared.get(key: "idToken") else { return false }
+
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "DELETE"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["postId": postId])
+            let (_, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return false }
+            return true
+        } catch {
+            print("❌ Delete post failed: \(error)")
+            return false
+        }
+    }
+
     // ── Mock data ─────────────────────────────────────────────────────────────
 
     private func loadMockData() {

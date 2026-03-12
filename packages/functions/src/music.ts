@@ -258,6 +258,43 @@ export const like = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxy
   }
 };
 
+export const deletePost = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  const headers = { "Access-Control-Allow-Origin": "*" };
+  try {
+    const userId = ((event.requestContext.authorizer as any)?.jwt?.claims?.sub
+                 ?? event.requestContext.authorizer?.claims?.sub) as string | undefined;
+    if (!userId) return { statusCode: 401, headers, body: JSON.stringify({ error: "Unauthorized" }) };
+
+    const { postId } = JSON.parse(event.body || "{}");
+    if (!postId) return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing postId" }) };
+
+    // Look up the post to verify ownership and get the sk for deletion
+    const queryResult = await ddb.send(new QueryCommand({
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "pk = :pk",
+      FilterExpression: "postId = :postId",
+      ExpressionAttributeValues: {
+        ":pk": `user#${userId}#posts`,
+        ":postId": postId,
+      },
+      Limit: 1,
+    }));
+
+    const item = queryResult.Items?.[0];
+    if (!item) return { statusCode: 404, headers, body: JSON.stringify({ error: "Post not found or not owned by you" }) };
+
+    await ddb.send(new DeleteCommand({
+      TableName: process.env.TABLE_NAME,
+      Key: { pk: `user#${userId}#posts`, sk: item.sk as string },
+    }));
+
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+  } catch (error) {
+    console.error("Delete post error:", error);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: "Failed to delete post" }) };
+  }
+};
+
 export const getLocationFeed = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const { latitude, longitude } = event.queryStringParameters || {};

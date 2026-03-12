@@ -14,6 +14,8 @@
 		AA0000130000000000000001 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000140000000000000001 /* FeedView.swift */; };
 		AA0000150000000000000001 /* TrackCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000160000000000000001 /* TrackCard.swift */; };
 		AA0000170000000000000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000180000000000000001 /* ShareViewController.swift */; };
+		DD4CCA002F629490002B4982 /* TagSuggestionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF7F2F5D486000B069BD /* TagSuggestionService.swift */; };
+		DD4CCA012F629490002B4982 /* VoiceMemoRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF802F5D486000B069BD /* VoiceMemoRecorder.swift */; };
 		DD62180E2F57CDDD00F9A654 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD62180D2F57CDDC00F9A654 /* PushNotificationService.swift */; };
 		DD6218112F57CDF400F9A654 /* LocationFeedService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD62180F2F57CDF400F9A654 /* LocationFeedService.swift */; };
 		DD6218122F57CDF400F9A654 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6218102F57CDF400F9A654 /* LocationService.swift */; };
@@ -89,7 +91,7 @@
 		AA0000140000000000000001 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		AA0000160000000000000001 /* TrackCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackCard.swift; sourceTree = "<group>"; };
 		AA0000180000000000000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
-		AA0000190000000000000001 /* ScrobbledAT.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScrobbledAT.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000190000000000000001 /* Selector.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Selector.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000200000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000210000000000000001 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000220000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -188,7 +190,7 @@
 		AA0000270000000000000001 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AA0000190000000000000001 /* ScrobbledAT.app */,
+				AA0000190000000000000001 /* Selector.app */,
 				AA0000210000000000000001 /* ShareExtension.appex */,
 			);
 			name = Products;
@@ -331,9 +333,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		AA0000330000000000000001 /* ScrobbledAT */ = {
+		AA0000330000000000000001 /* Selector */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AA0000340000000000000001 /* Build configuration list for PBXNativeTarget "ScrobbledAT" */;
+			buildConfigurationList = AA0000340000000000000001 /* Build configuration list for PBXNativeTarget "Selector" */;
 			buildPhases = (
 				DD63601E2F551F6000D8F1C5 /* Frameworks */,
 				AA0000350000000000000001 /* Sources */,
@@ -345,12 +347,12 @@
 			dependencies = (
 				DD63600C2F53E63100D8F1C5 /* PBXTargetDependency */,
 			);
-			name = ScrobbledAT;
+			name = Selector;
 			packageProductDependencies = (
 				DD7ADF662F5B9DDF00B069BD /* PostHog */,
 			);
 			productName = ScrobbledAT;
-			productReference = AA0000190000000000000001 /* ScrobbledAT.app */;
+			productReference = AA0000190000000000000001 /* Selector.app */;
 			productType = "com.apple.product-type.application";
 		};
 		AA0000370000000000000001 /* ShareExtension */ = {
@@ -406,7 +408,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				AA0000330000000000000001 /* ScrobbledAT */,
+				AA0000330000000000000001 /* Selector */,
 				AA0000370000000000000001 /* ShareExtension */,
 			);
 		};
@@ -474,6 +476,8 @@
 				DD6360082F53DA5700D8F1C5 /* Track.swift in Sources */,
 				DD7ADF6E2F5B9F6100B069BD /* Analytics.swift in Sources */,
 				DD7ADF6A2F5B9E7800B069BD /* UploadService.swift in Sources */,
+				DD4CCA002F629490002B4982 /* TagSuggestionService.swift in Sources */,
+				DD4CCA012F629490002B4982 /* VoiceMemoRecorder.swift in Sources */,
 				DD7ADF642F5B921A00B069BD /* Config.swift in Sources */,
 				DD7ADF6B2F5B9ED200B069BD /* KeychainService.swift in Sources */,
 				DD63605A2F55C02A00D8F1C5 /* MusicMetadataService.swift in Sources */,
@@ -590,6 +594,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 8XNHQM55HE;
@@ -627,6 +632,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ScrobbledAT/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Selector;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -658,6 +664,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ScrobbledAT/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Selector;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -671,6 +678,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.wirestorm.scrobbler;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -732,7 +740,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AA0000340000000000000001 /* Build configuration list for PBXNativeTarget "ScrobbledAT" */ = {
+		AA0000340000000000000001 /* Build configuration list for PBXNativeTarget "Selector" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AA0000440000000000000001 /* Debug */,

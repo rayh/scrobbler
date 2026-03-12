@@ -197,6 +197,8 @@ struct UserProfileView: View {
     @State private var showingAvatarPicker = false
     @State private var selectedPhoto: PhotosPickerItem? = nil
     @ObservedObject private var locationService = LocationService.shared
+    // Needed so FeedPostCell children can read it
+    @EnvironmentObject private var appleSignInService: AppleSignInService
 
     // Resolve which data + loading state to show depending on profile mode
     private var displayData: UserProfileData? {
@@ -306,8 +308,12 @@ struct UserProfileView: View {
                 } else {
                     LazyVStack(spacing: 0) {
                         ForEach(profile.posts) { post in
-                            FeedPostCell(group: post.asFeedGroup(userHandle: profile.handle), showUser: false)
-                                .padding(.vertical, 6)
+                            FeedPostCell(
+                                group: post.asFeedGroup(userHandle: profile.handle),
+                                showUser: false,
+                                hideActions: isOwnProfile
+                            )
+                            .padding(.vertical, 6)
                         }
                     }
                     .padding(.horizontal, 0)
@@ -315,6 +321,7 @@ struct UserProfileView: View {
             }
         }
         .environmentObject(FeedService.shared)
+        .environmentObject(AppSettings.shared)
     }
 
     // MARK: - Profile Header

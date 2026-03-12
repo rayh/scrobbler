@@ -7,170 +7,6 @@ import AVFoundation
 import Speech
 import os.log
 
-// MARK: - TagSuggestionService
-
-struct TagSuggestionService {
-    private static let stopwords: Set<String> = [
-        "this", "that", "just", "like", "love", "great", "good", "really",
-        "very", "much", "more", "some", "song", "track", "music", "album",
-        "listen", "listening", "playing", "heard", "hear", "sounds", "sound",
-        "feel", "feeling", "makes", "think", "know", "want", "need", "going"
-    ]
-
-    static func keywords(from text: String, limit: Int = 5) -> [String] {
-        guard !text.isEmpty else { return [] }
-        let tagger = NLTagger(tagSchemes: [.lexicalClass])
-        tagger.string = text
-        var frequency: [String: Int] = [:]
-        let options: NLTagger.Options = [.omitWhitespace, .omitPunctuation, .omitOther]
-        tagger.enumerateTags(in: text.startIndex..<text.endIndex,
-                             unit: .word, scheme: .lexicalClass,
-                             options: options) { tag, range in
-            guard let tag, tag == .noun || tag == .adjective else { return true }
-            let word = String(text[range]).lowercased().trimmingCharacters(in: .punctuationCharacters)
-            guard word.count >= 4, !stopwords.contains(word), word.allSatisfy(\.isLetter) else { return true }
-            frequency[word, default: 0] += 1
-            return true
-        }
-        return frequency.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
-                        .prefix(limit).map { $0.key }
-    }
-}
-
-// MARK: - VoiceMemoRecorder
-
-@MainActor
-class VoiceMemoRecorder: NSObject, ObservableObject {
-    @Published var isRecording = false
-    @Published var isTranscribing = false
-    @Published var transcript: String = ""
-    @Published var recordedData: Data? = nil
-    @Published var error: String?
-
-    private let maxRecordingDuration: TimeInterval = 10  // hard cap
-    private var audioEngine: AVAudioEngine?
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    private var recognitionTask: SFSpeechRecognitionTask?
-    private let recognizer = SFSpeechRecognizer(locale: Locale.current)
-
-    private var audioFile: AVAudioFile?
-    private var tempFileURL: URL?
-
-    static func hasPermissions() async -> Bool {
-        let mic = AVAudioApplication.shared.recordPermission
-        if mic == .undetermined {
-            return await AVAudioApplication.requestRecordPermission()
-        }
-        guard mic == .granted else { return false }
-        // SFSpeechRecognizer.requestAuthorization calls back on an arbitrary
-        // background thread. Running the continuation from a nonisolated context
-        // avoids the MainActor executor assertion crash on iOS 26.
-        return await Task.detached {
-            await withCheckedContinuation { cont in
-                SFSpeechRecognizer.requestAuthorization { status in
-                    cont.resume(returning: status == .authorized)
-                }
-            }
-        }.value
-    }
-
-    func startRecording() {
-        guard !isRecording else { return }
-        transcript = ""; error = nil; recordedData = nil
-        let engine = AVAudioEngine()
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-        request.requiresOnDeviceRecognition = true
-        let inputNode = engine.inputNode
-        let format = inputNode.outputFormat(forBus: 0)
-
-        let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("caf")
-        tempFileURL = tmp
-        audioFile = try? AVAudioFile(forWriting: tmp, settings: format.settings)
-
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.recognitionRequest?.append(buffer)
-            try? self?.audioFile?.write(from: buffer)
-        }
-        recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
-            guard let self else { return }
-            if let result {
-                Task { @MainActor in self.transcript = result.bestTranscription.formattedString }
-            }
-            if error != nil || result?.isFinal == true {
-                Task { @MainActor in
-                    self.stopEngine(); self.isRecording = false; self.isTranscribing = false
-                }
-            }
-        }
-        engine.prepare()
-        do { try engine.start() } catch {
-            self.error = "Could not start audio: \(error.localizedDescription)"; return
-        }
-        audioEngine = engine; recognitionRequest = request; isRecording = true
-        Task {
-            try? await Task.sleep(for: .seconds(maxRecordingDuration))
-            if isRecording { stopRecording() }
-        }
-    }
-
-    func stopRecording() {
-        guard isRecording else { return }
-        recognitionRequest?.endAudio()
-        stopEngine()
-        isRecording = false
-        isTranscribing = !transcript.isEmpty
-        convertAndCapture()
-    }
-
-    func clearRecording() {
-        transcript = ""
-        recordedData = nil
-        isTranscribing = false
-        if let url = tempFileURL {
-            try? FileManager.default.removeItem(at: url)
-            tempFileURL = nil
-        }
-    }
-
-    private func stopEngine() {
-        audioEngine?.inputNode.removeTap(onBus: 0)
-        audioEngine?.stop()
-        audioFile = nil
-        audioEngine = nil; recognitionRequest = nil; recognitionTask = nil
-    }
-
-    private func convertAndCapture() {
-        guard let srcURL = tempFileURL else { return }
-        Task.detached(priority: .userInitiated) { [weak self] in
-            guard let self else { return }
-            let dstURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent(UUID().uuidString)
-                .appendingPathExtension("m4a")
-            do {
-                let asset = AVURLAsset(url: srcURL)
-                guard let exportSession = AVAssetExportSession(
-                    asset: asset,
-                    presetName: AVAssetExportPresetAppleM4A
-                ) else { return }
-                exportSession.outputURL = dstURL
-                exportSession.outputFileType = .m4a
-                await exportSession.export()
-                let data = try Data(contentsOf: dstURL)
-                try? FileManager.default.removeItem(at: srcURL)
-                try? FileManager.default.removeItem(at: dstURL)
-                await MainActor.run { self.recordedData = data }
-            } catch {
-                await MainActor.run {
-                    self.error = "Audio conversion failed: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Location delegate for one-time location request
 class LocationDelegate: NSObject, CLLocationManagerDelegate {
     private let completion: ((lat: Double, lng: Double)?) -> Void
@@ -526,10 +362,11 @@ class ShareViewController: UIViewController {
             throw UploadArtworkError.presignFailed
         }
 
-        // 4. PUT webp data directly to S3
+        // 4. PUT image data directly to S3 — use correct content type
+        let contentType = artworkContentType(for: webpData)
         var s3Req = URLRequest(url: s3Url)
         s3Req.httpMethod = "PUT"
-        s3Req.setValue("image/webp", forHTTPHeaderField: "Content-Type")
+        s3Req.setValue(contentType, forHTTPHeaderField: "Content-Type")
         s3Req.httpBody = webpData
 
         let (_, s3Resp) = try await URLSession.shared.data(for: s3Req)
@@ -586,14 +423,35 @@ class ShareViewController: UIViewController {
         let cropped = UIImage(cgImage: cgCropped)
         let renderer = UIGraphicsImageRenderer(size: targetSize)
         let resized = renderer.image { _ in cropped.draw(in: CGRect(origin: .zero, size: targetSize)) }
-        guard let cgImage = resized.cgImage else { throw UploadArtworkError.invalidImageData }
-        let mutableData = NSMutableData()
-        guard let dest = CGImageDestinationCreateWithData(
-            mutableData, "public.webp" as CFString, 1, nil
-        ) else { throw UploadArtworkError.imageConversionFailed }
-        CGImageDestinationAddImage(dest, cgImage, [kCGImageDestinationLossyCompressionQuality: 1.0] as CFDictionary)
-        guard CGImageDestinationFinalize(dest) else { throw UploadArtworkError.imageConversionFailed }
-        return mutableData as Data
+
+        // Try WebP first; fall back to JPEG if unavailable or encoding fails
+        if let cgImage = resized.cgImage {
+            let mutableData = NSMutableData()
+            if let dest = CGImageDestinationCreateWithData(
+                mutableData, UTType.webP.identifier as CFString, 1, nil
+            ) {
+                CGImageDestinationAddImage(dest, cgImage, [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)
+                if CGImageDestinationFinalize(dest), mutableData.length > 0 {
+                    return mutableData as Data
+                }
+            }
+        }
+
+        // JPEG fallback — always works
+        guard let jpegData = resized.jpegData(compressionQuality: 0.85) else {
+            throw UploadArtworkError.imageConversionFailed
+        }
+        return jpegData
+    }
+
+    private func artworkContentType(for data: Data) -> String {
+        // Detect by magic bytes: WebP starts with "RIFF....WEBP"
+        if data.count > 12,
+           data[0] == 0x52, data[1] == 0x49, data[2] == 0x46, data[3] == 0x46,
+           data[8] == 0x57, data[9] == 0x45, data[10] == 0x42, data[11] == 0x50 {
+            return "image/webp"
+        }
+        return "image/jpeg"
     }
     
     // Retained for the duration of the location request
@@ -870,8 +728,8 @@ struct ShareComposerView: View {
                 ToolbarItemGroup(placement: .cancellationAction) {
                     Button("Cancel") { onCancel() }.disabled(isPosting)
                 }
-                ToolbarItemGroup(placement: .confirmationAction) {
-                    // Location icon toggle — compact, no label
+                ToolbarItem(placement: .topBarLeading) {
+                    // Location icon toggle — in leading area so it's separate from Share
                     Button {
                         shareLocation.toggle()
                     } label: {
@@ -879,7 +737,8 @@ struct ShareComposerView: View {
                             .foregroundColor(shareLocation ? .blue : .secondary)
                     }
                     .help(shareLocation ? "Location on" : "Location off")
-
+                }
+                ToolbarItemGroup(placement: .confirmationAction) {
                     Button {
                         Task {
                             isPosting = true

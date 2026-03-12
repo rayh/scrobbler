@@ -23,9 +23,10 @@ class UploadService {
         type: UploadType,
         postId: String? = nil
     ) async throws -> String {
-        let webpData = try resizeAndConvert(image)
+        let imageData = try resizeAndConvert(image)
+        let contentType = imageData.isWebP ? "image/webp" : "image/jpeg"
         let (uploadUrl, cdnUrl) = try await requestUploadUrl(type: type, postId: postId)
-        try await putToS3(data: webpData, url: uploadUrl, contentType: "image/webp")
+        try await putToS3(data: imageData, url: uploadUrl, contentType: contentType)
         return cdnUrl
     }
 
@@ -41,6 +42,19 @@ class UploadService {
         return cdnUrl
     }
 
+    /// Upload a voice memo from raw Data. Returns CDN URL or nil on failure (non-throwing convenience).
+    func uploadVoiceMemo(_ data: Data, idToken: String) async -> String? {
+        let postId = "repost-\(Int(Date().timeIntervalSince1970))-\(UUID().uuidString.prefix(8))"
+        do {
+            let (uploadUrl, cdnUrl) = try await requestUploadUrl(type: .voice, postId: postId)
+            try await putToS3(data: data, url: uploadUrl, contentType: "audio/m4a")
+            return cdnUrl
+        } catch {
+            print("❌ Voice memo upload failed: \(error)")
+            return nil
+        }
+    }
+
     // MARK: - Upload types
 
     enum UploadType: String {
@@ -51,7 +65,7 @@ class UploadService {
 
     // MARK: - Image processing
 
-    /// Center-crops to square, resizes to 1024x1024, encodes as WebP.
+    /// Center-crops to square, resizes to 1024x1024, encodes as WebP with JPEG fallback.
     private func resizeAndConvert(_ image: UIImage) throws -> Data {
         // 1. Center-crop to square
         let cropped = centerCrop(image)
@@ -62,28 +76,27 @@ class UploadService {
             cropped.draw(in: CGRect(origin: .zero, size: targetSize))
         }
 
-        // 3. Encode as WebP (supported iOS 14+)
-        guard let cgImage = resized.cgImage else {
+        // 3. Try WebP; fall back to JPEG
+        if let cgImage = resized.cgImage {
+            let mutableData = NSMutableData()
+            if let destination = CGImageDestinationCreateWithData(
+                mutableData,
+                UTType.webP.identifier as CFString,
+                1,
+                nil
+            ) {
+                let options: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.85]
+                CGImageDestinationAddImage(destination, cgImage, options as CFDictionary)
+                if CGImageDestinationFinalize(destination), mutableData.length > 0 {
+                    return mutableData as Data
+                }
+            }
+        }
+        // JPEG fallback
+        guard let jpegData = resized.jpegData(compressionQuality: 0.85) else {
             throw UploadError.imageConversionFailed
         }
-        let mutableData = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(
-            mutableData,
-            UTType.webP.identifier as CFString,
-            1,
-            nil
-        ) else {
-            throw UploadError.imageConversionFailed
-        }
-        // Lossless WebP
-        let options: [CFString: Any] = [
-            kCGImageDestinationLossyCompressionQuality: 1.0
-        ]
-        CGImageDestinationAddImage(destination, cgImage, options as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else {
-            throw UploadError.imageConversionFailed
-        }
-        return mutableData as Data
+        return jpegData
     }
 
     private func centerCrop(_ image: UIImage) -> UIImage {
@@ -166,5 +179,14 @@ enum UploadError: LocalizedError {
         case .s3Error(let code):      return "Upload failed (\(code))"
         case .unexpectedResponse:     return "Unexpected server response"
         }
+    }
+}
+
+private extension Data {
+    /// True when data starts with the WebP magic bytes (RIFF....WEBP).
+    var isWebP: Bool {
+        count > 12 &&
+        self[0] == 0x52 && self[1] == 0x49 && self[2] == 0x46 && self[3] == 0x46 &&
+        self[8] == 0x57 && self[9] == 0x45 && self[10] == 0x42 && self[11] == 0x50
     }
 }

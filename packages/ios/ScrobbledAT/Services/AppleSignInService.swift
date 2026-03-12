@@ -29,6 +29,7 @@ class AppleSignInService: NSObject, ObservableObject {
         let parts = idToken.split(separator: ".")
         guard parts.count == 3 else {
             self.isAuthenticated = true
+            self.restoreOrFetchHandle()
             return
         }
 
@@ -42,14 +43,42 @@ class AppleSignInService: NSObject, ObservableObject {
               let exp = payload["exp"] as? TimeInterval else {
             // Can't decode expiry — treat as valid and let the server decide
             self.isAuthenticated = true
+            self.restoreOrFetchHandle()
             return
         }
 
         if Date(timeIntervalSince1970: exp) > Date() {
             self.isAuthenticated = true
+            self.restoreOrFetchHandle()
         } else {
             Log.auth.info("Stored idToken is expired — clearing keychain")
             KeychainService.shared.clear()
+        }
+    }
+
+    /// Restores currentUser from UserDefaults if available, otherwise fetches GET /me.
+    private func restoreOrFetchHandle() {
+        if let handle = UserDefaults.standard.string(forKey: "myHandle") {
+            self.currentUser = User(handle: handle, name: nil)
+        } else {
+            Task {
+                await fetchAndStoreMe()
+            }
+        }
+    }
+
+    func fetchAndStoreMe() async {
+        guard let idToken = KeychainService.shared.get(key: "idToken"),
+              let url = URL(string: "\(apiBaseUrl)/me") else { return }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let handle = json["handle"] as? String else { return }
+        await MainActor.run {
+            UserDefaults.standard.set(handle, forKey: "myHandle")
+            self.currentUser = User(handle: handle, name: nil)
         }
     }
 
@@ -70,6 +99,7 @@ class AppleSignInService: NSObject, ObservableObject {
         Analytics.reset()
 
         UserDefaults.standard.removeObject(forKey: "userProfile")
+        UserDefaults.standard.removeObject(forKey: "myHandle")
         if let sharedDefaults = UserDefaults(suiteName: "group.net.wirestorm.scrobbler") {
             sharedDefaults.removeObject(forKey: "isAuthenticated")
             sharedDefaults.removeObject(forKey: "userProfile")
@@ -142,9 +172,16 @@ extension AppleSignInService: ASAuthorizationControllerDelegate {
 
                         self.isAuthenticated = true
 
+                        // Persist handle so currentUser survives app restarts
+                        let handle = response["handle"] as? String
+                        if let handle {
+                            UserDefaults.standard.set(handle, forKey: "myHandle")
+                            self.currentUser = User(handle: handle, name: nil)
+                        }
+
                         // Identify the user in PostHog — userId from JWT sub
                         if let sub = self.jwtSub(from: idToken) {
-                            Analytics.identify(userId: sub, handle: response["handle"] as? String ?? "")
+                            Analytics.identify(userId: sub, handle: handle ?? "")
                         }
 
                         // hasHandle is the authoritative signal — always present and accurate.
