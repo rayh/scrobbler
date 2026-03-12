@@ -4,6 +4,38 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
+export const followers = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  try {
+    const sub = ((event.requestContext.authorizer as any)?.jwt?.claims?.sub
+              ?? event.requestContext.authorizer?.claims?.sub) as string | undefined;
+    if (!sub) {
+      return { statusCode: 401, body: JSON.stringify({ error: "Unauthorized" }) };
+    }
+
+    const result = await ddb.send(new QueryCommand({
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "pk = :pk",
+      ExpressionAttributeValues: { ":pk": `user#${sub}#followers` },
+      ScanIndexForward: false,
+    }));
+
+    const followers = (result.Items || []).map(item => ({
+      handle: item.followerHandle as string,
+      userId: item.followerId as string,
+      followedAt: item.createdAt as string,
+    }));
+
+    return {
+      statusCode: 200,
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({ followers }),
+    };
+  } catch (error) {
+    console.error("followers error:", error);
+    return { statusCode: 500, body: JSON.stringify({ error: "Internal server error" }) };
+  }
+};
+
 export const following = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const sub = ((event.requestContext.authorizer as any)?.jwt?.claims?.sub

@@ -26,9 +26,11 @@ class AppRouter: ObservableObject {
 
 struct ContentView: View {
     @StateObject private var appleSignInService = AppleSignInService()
-    @StateObject private var feedService = FeedService()
-    @StateObject private var locationService = LocationService()
+    @StateObject private var feedService = FeedService.shared
+    @StateObject private var locationService = LocationService.shared
+    @StateObject private var locationFeedService = LocationFeedService.shared
     @StateObject private var router = AppRouter()
+    @StateObject private var appSettings = AppSettings.shared
     @EnvironmentObject var pushService: PushNotificationService
 
     var body: some View {
@@ -38,8 +40,17 @@ struct ContentView: View {
                     .environmentObject(appleSignInService)
                     .environmentObject(feedService)
                     .environmentObject(locationService)
+                    .environmentObject(locationFeedService)
                     .environmentObject(pushService)
                     .environmentObject(router)
+                    .environmentObject(appSettings)
+                    // One-time Apple Music sync prompt
+                    .sheet(isPresented: Binding(
+                        get: { !appSettings.appleMusicSyncAsked },
+                        set: { if !$0 { appSettings.appleMusicSyncAsked = true } }
+                    )) {
+                        AppleMusicSyncPromptView()
+                    }
             } else {
                 OnboardingView()
                     .environmentObject(appleSignInService)

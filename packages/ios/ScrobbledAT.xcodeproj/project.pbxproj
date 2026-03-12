@@ -25,14 +25,10 @@
 		DD6360112F550C2E00D8F1C5 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD63600F2F550C2E00D8F1C5 /* OnboardingView.swift */; };
 		DD6360142F550E3E00D8F1C5 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6360122F550E3E00D8F1C5 /* MainTabView.swift */; };
 		DD6360162F550E7B00D8F1C5 /* RichTrackCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6360152F550E7B00D8F1C5 /* RichTrackCard.swift */; };
-		DD63604F2F55BEC700D8F1C5 /* OAuthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD63604C2F55BEC700D8F1C5 /* OAuthModels.swift */; };
-		DD6360502F55BEC700D8F1C5 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD63604B2F55BEC700D8F1C5 /* KeychainManager.swift */; };
-		DD6360512F55BEC700D8F1C5 /* PKCEGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD63604D2F55BEC700D8F1C5 /* PKCEGenerator.swift */; };
 		DD6360562F55BF0600D8F1C5 /* MusicMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6360532F55BF0600D8F1C5 /* MusicMetadataService.swift */; };
 		DD63605A2F55C02A00D8F1C5 /* MusicMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6360532F55BF0600D8F1C5 /* MusicMetadataService.swift */; };
 		DD6360602F55C57300D8F1C5 /* ShareExtensionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD63605F2F55C57300D8F1C5 /* ShareExtensionService.swift */; };
 		DD6360612F55C57300D8F1C5 /* ShareExtensionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD63605F2F55C57300D8F1C5 /* ShareExtensionService.swift */; };
-		DD6360632F55D21F00D8F1C5 /* DPoPGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6360622F55D21F00D8F1C5 /* DPoPGenerator.swift */; };
 		DD6360652F56ED0000D8F1C5 /* AppleSignInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6360642F56ED0000D8F1C5 /* AppleSignInService.swift */; };
 		DD6360682F56ED3900D8F1C5 /* HandleSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6360662F56ED3900D8F1C5 /* HandleSelectionView.swift */; };
 		DD63606A2F56ED4D00D8F1C5 /* FeedService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6360692F56ED4D00D8F1C5 /* FeedService.swift */; };
@@ -49,6 +45,17 @@
 		DD7ADF6D2F5B9F6100B069BD /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF6C2F5B9F6100B069BD /* Analytics.swift */; };
 		DD7ADF6E2F5B9F6100B069BD /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF6C2F5B9F6100B069BD /* Analytics.swift */; };
 		DD7ADF702F5B9F9C00B069BD /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = DD7ADF6F2F5B9F9C00B069BD /* PostHog */; };
+		DD7ADF722F5D1EB900B069BD /* MusicSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF712F5D1EB900B069BD /* MusicSyncService.swift */; };
+		DD7ADF742F5D1EBF00B069BD /* MusicMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF732F5D1EBF00B069BD /* MusicMetadataService.swift */; };
+		DD7ADF762F5D1EC900B069BD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF752F5D1EC900B069BD /* AppSettings.swift */; };
+		DD7ADF782F5D1EE100B069BD /* AppleMusicSyncPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF772F5D1EE100B069BD /* AppleMusicSyncPromptView.swift */; };
+		DD7ADF7A2F5D1EF000B069BD /* FollowersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF792F5D1EF000B069BD /* FollowersView.swift */; };
+		DD7ADF7C2F5D1F7200B069BD /* MusicKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD7ADF7B2F5D1F7200B069BD /* MusicKit.framework */; };
+		DD7ADF812F5D486000B069BD /* VoiceMemoRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF802F5D486000B069BD /* VoiceMemoRecorder.swift */; };
+		DD7ADF822F5D486000B069BD /* TagSuggestionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF7F2F5D486000B069BD /* TagSuggestionService.swift */; };
+		DD7ADF852F5D547400B069BD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF832F5D547400B069BD /* SettingsView.swift */; };
+		DD7ADF872F5D583300B069BD /* MusicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7ADF862F5D583300B069BD /* MusicService.swift */; };
+		DD9FBA1A2F603EEA008211ED /* MusicKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD7ADF7B2F5D1F7200B069BD /* MusicKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,13 +104,8 @@
 		DD63600F2F550C2E00D8F1C5 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		DD6360122F550E3E00D8F1C5 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		DD6360152F550E7B00D8F1C5 /* RichTrackCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTrackCard.swift; sourceTree = "<group>"; };
-		DD63604B2F55BEC700D8F1C5 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
-		DD63604C2F55BEC700D8F1C5 /* OAuthModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthModels.swift; sourceTree = "<group>"; };
-		DD63604D2F55BEC700D8F1C5 /* PKCEGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCEGenerator.swift; sourceTree = "<group>"; };
 		DD6360532F55BF0600D8F1C5 /* MusicMetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicMetadataService.swift; sourceTree = "<group>"; };
-		DD6360542F55BF0600D8F1C5 /* NativeOAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeOAuthService.swift; sourceTree = "<group>"; };
 		DD63605F2F55C57300D8F1C5 /* ShareExtensionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionService.swift; sourceTree = "<group>"; };
-		DD6360622F55D21F00D8F1C5 /* DPoPGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DPoPGenerator.swift; sourceTree = "<group>"; };
 		DD6360642F56ED0000D8F1C5 /* AppleSignInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInService.swift; sourceTree = "<group>"; };
 		DD6360662F56ED3900D8F1C5 /* HandleSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandleSelectionView.swift; sourceTree = "<group>"; };
 		DD6360692F56ED4D00D8F1C5 /* FeedService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedService.swift; sourceTree = "<group>"; };
@@ -114,6 +116,16 @@
 		DD7ADF622F5B03D700B069BD /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		DD7ADF682F5B9E7800B069BD /* UploadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadService.swift; sourceTree = "<group>"; };
 		DD7ADF6C2F5B9F6100B069BD /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
+		DD7ADF712F5D1EB900B069BD /* MusicSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicSyncService.swift; sourceTree = "<group>"; };
+		DD7ADF732F5D1EBF00B069BD /* MusicMetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicMetadataService.swift; sourceTree = "<group>"; };
+		DD7ADF752F5D1EC900B069BD /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		DD7ADF772F5D1EE100B069BD /* AppleMusicSyncPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicSyncPromptView.swift; sourceTree = "<group>"; };
+		DD7ADF792F5D1EF000B069BD /* FollowersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowersView.swift; sourceTree = "<group>"; };
+		DD7ADF7B2F5D1F7200B069BD /* MusicKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MusicKit.framework; path = System/Library/Frameworks/MusicKit.framework; sourceTree = SDKROOT; };
+		DD7ADF7F2F5D486000B069BD /* TagSuggestionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSuggestionService.swift; sourceTree = "<group>"; };
+		DD7ADF802F5D486000B069BD /* VoiceMemoRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceMemoRecorder.swift; sourceTree = "<group>"; };
+		DD7ADF832F5D547400B069BD /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		DD7ADF862F5D583300B069BD /* MusicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +134,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DD7ADF702F5B9F9C00B069BD /* PostHog in Frameworks */,
+				DD9FBA1A2F603EEA008211ED /* MusicKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,6 +143,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DD7ADF672F5B9DDF00B069BD /* PostHog in Frameworks */,
+				DD7ADF7C2F5D1F7200B069BD /* MusicKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -149,7 +163,6 @@
 		AA0000250000000000000001 /* ScrobbledAT */ = {
 			isa = PBXGroup;
 			children = (
-				DD63604E2F55BEC700D8F1C5 /* Authentication */,
 				AA0000230000000000000001 /* ScrobbledAT.entitlements */,
 				AA0000200000000000000001 /* Info.plist */,
 				AA0000280000000000000001 /* App */,
@@ -202,6 +215,7 @@
 		AA0000310000000000000001 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				DD7ADF842F5D547400B069BD /* Settings */,
 				DD7ADF5A2F5AA21F00B069BD /* Profile */,
 				DD6218142F57CE0000F9A654 /* Location */,
 				DD6360672F56ED3900D8F1C5 /* Auth */,
@@ -242,6 +256,7 @@
 			isa = PBXGroup;
 			children = (
 				DD63600F2F550C2E00D8F1C5 /* OnboardingView.swift */,
+				DD7ADF772F5D1EE100B069BD /* AppleMusicSyncPromptView.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -257,24 +272,20 @@
 		DD6360412F5541B700D8F1C5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				DD7ADF7B2F5D1F7200B069BD /* MusicKit.framework */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		DD63604E2F55BEC700D8F1C5 /* Authentication */ = {
-			isa = PBXGroup;
-			children = (
-				DD6360622F55D21F00D8F1C5 /* DPoPGenerator.swift */,
-				DD63604B2F55BEC700D8F1C5 /* KeychainManager.swift */,
-				DD63604C2F55BEC700D8F1C5 /* OAuthModels.swift */,
-				DD63604D2F55BEC700D8F1C5 /* PKCEGenerator.swift */,
-			);
-			path = Authentication;
 			sourceTree = "<group>";
 		};
 		DD6360552F55BF0600D8F1C5 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				DD7ADF7F2F5D486000B069BD /* TagSuggestionService.swift */,
+				DD7ADF802F5D486000B069BD /* VoiceMemoRecorder.swift */,
+				DD7ADF752F5D1EC900B069BD /* AppSettings.swift */,
+				DD7ADF732F5D1EBF00B069BD /* MusicMetadataService.swift */,
+				DD7ADF862F5D583300B069BD /* MusicService.swift */,
+				DD7ADF712F5D1EB900B069BD /* MusicSyncService.swift */,
 				DD7ADF6C2F5B9F6100B069BD /* Analytics.swift */,
 				DD62180F2F57CDF400F9A654 /* LocationFeedService.swift */,
 				DD6218102F57CDF400F9A654 /* LocationService.swift */,
@@ -285,7 +296,6 @@
 				DD7ADF5E2F5AAB0C00B069BD /* ProfileService.swift */,
 				DD6360532F55BF0600D8F1C5 /* MusicMetadataService.swift */,
 				DD7ADF682F5B9E7800B069BD /* UploadService.swift */,
-				DD6360542F55BF0600D8F1C5 /* NativeOAuthService.swift */,
 				DD6218212F594A5600F9A654 /* KeychainService.swift */,
 				DD7ADF5C2F5AA22F00B069BD /* SocialService.swift */,
 			);
@@ -303,10 +313,19 @@
 		DD7ADF5A2F5AA21F00B069BD /* Profile */ = {
 			isa = PBXGroup;
 			children = (
+				DD7ADF792F5D1EF000B069BD /* FollowersView.swift */,
 				DD7ADF592F5AA21F00B069BD /* FollowingView.swift */,
 				DD7ADF602F5AAC3200B069BD /* UserProfileView.swift */,
 			);
 			path = Profile;
+			sourceTree = "<group>";
+		};
+		DD7ADF842F5D547400B069BD /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				DD7ADF832F5D547400B069BD /* SettingsView.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -324,8 +343,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				DD63603E2F55404500D8F1C5 /* PBXTargetDependency */,
-				DD63603A2F55310800D8F1C5 /* PBXTargetDependency */,
 				DD63600C2F53E63100D8F1C5 /* PBXTargetDependency */,
 			);
 			name = ScrobbledAT;
@@ -346,8 +363,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				DD6360402F55404A00D8F1C5 /* PBXTargetDependency */,
-				DD63603C2F55310E00D8F1C5 /* PBXTargetDependency */,
 			);
 			name = ShareExtension;
 			packageProductDependencies = (
@@ -385,8 +400,6 @@
 			);
 			mainGroup = AA0000240000000000000001;
 			packageReferences = (
-				DD63601F2F55210000D8F1C5 /* XCRemoteSwiftPackageReference "OAuthenticator" */,
-				DD6360202F55211000D8F1C5 /* XCRemoteSwiftPackageReference "Jot" */,
 				DD7ADF652F5B9DDF00B069BD /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			productRefGroup = AA0000270000000000000001 /* Products */;
@@ -417,31 +430,36 @@
 			files = (
 				DD6218112F57CDF400F9A654 /* LocationFeedService.swift in Sources */,
 				DD6218122F57CDF400F9A654 /* LocationService.swift in Sources */,
+				DD7ADF7A2F5D1EF000B069BD /* FollowersView.swift in Sources */,
 				DD7ADF5F2F5AAB0C00B069BD /* ProfileService.swift in Sources */,
-				DD6360632F55D21F00D8F1C5 /* DPoPGenerator.swift in Sources */,
 				DD6218152F57CE0000F9A654 /* LocationFeedView.swift in Sources */,
+				DD7ADF852F5D547400B069BD /* SettingsView.swift in Sources */,
 				AA0000010000000000000001 /* ScrobbledATApp.swift in Sources */,
 				DD6360602F55C57300D8F1C5 /* ShareExtensionService.swift in Sources */,
+				DD7ADF722F5D1EB900B069BD /* MusicSyncService.swift in Sources */,
 				DD7ADF612F5AAC3200B069BD /* UserProfileView.swift in Sources */,
 				DD7ADF692F5B9E7800B069BD /* UploadService.swift in Sources */,
 				AA0000030000000000000001 /* ContentView.swift in Sources */,
+				DD7ADF762F5D1EC900B069BD /* AppSettings.swift in Sources */,
 				DD7ADF5B2F5AA21F00B069BD /* FollowingView.swift in Sources */,
 				DD6218222F594A5700F9A654 /* KeychainService.swift in Sources */,
 				DD6360142F550E3E00D8F1C5 /* MainTabView.swift in Sources */,
+				DD7ADF782F5D1EE100B069BD /* AppleMusicSyncPromptView.swift in Sources */,
 				DD6360162F550E7B00D8F1C5 /* RichTrackCard.swift in Sources */,
 				DD6360562F55BF0600D8F1C5 /* MusicMetadataService.swift in Sources */,
 				DD6360682F56ED3900D8F1C5 /* HandleSelectionView.swift in Sources */,
 				DD7ADF5D2F5AA22F00B069BD /* SocialService.swift in Sources */,
-				DD63604F2F55BEC700D8F1C5 /* OAuthModels.swift in Sources */,
 				DD7ADF6D2F5B9F6100B069BD /* Analytics.swift in Sources */,
 				DD6218252F5A3B5500F9A654 /* Log.swift in Sources */,
+				DD7ADF812F5D486000B069BD /* VoiceMemoRecorder.swift in Sources */,
+				DD7ADF822F5D486000B069BD /* TagSuggestionService.swift in Sources */,
 				DD62180E2F57CDDD00F9A654 /* PushNotificationService.swift in Sources */,
-				DD6360502F55BEC700D8F1C5 /* KeychainManager.swift in Sources */,
-				DD6360512F55BEC700D8F1C5 /* PKCEGenerator.swift in Sources */,
+				DD7ADF872F5D583300B069BD /* MusicService.swift in Sources */,
 				DD7ADF632F5B03D700B069BD /* Config.swift in Sources */,
 				AA0000070000000000000001 /* Track.swift in Sources */,
 				DD6360112F550C2E00D8F1C5 /* OnboardingView.swift in Sources */,
 				AA0000130000000000000001 /* FeedView.swift in Sources */,
+				DD7ADF742F5D1EBF00B069BD /* MusicMetadataService.swift in Sources */,
 				DD6360652F56ED0000D8F1C5 /* AppleSignInService.swift in Sources */,
 				AA0000150000000000000001 /* TrackCard.swift in Sources */,
 				DD63606A2F56ED4D00D8F1C5 /* FeedService.swift in Sources */,
@@ -470,22 +488,6 @@
 			isa = PBXTargetDependency;
 			target = AA0000370000000000000001 /* ShareExtension */;
 			targetProxy = DD63600B2F53E63100D8F1C5 /* PBXContainerItemProxy */;
-		};
-		DD63603A2F55310800D8F1C5 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			productRef = DD6360392F55310800D8F1C5 /* OAuthenticator */;
-		};
-		DD63603C2F55310E00D8F1C5 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			productRef = DD63603B2F55310E00D8F1C5 /* OAuthenticator */;
-		};
-		DD63603E2F55404500D8F1C5 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			productRef = DD63603D2F55404500D8F1C5 /* Jot */;
-		};
-		DD6360402F55404A00D8F1C5 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			productRef = DD63603F2F55404A00D8F1C5 /* Jot */;
 		};
 /* End PBXTargetDependency section */
 
@@ -760,22 +762,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		DD63601F2F55210000D8F1C5 /* XCRemoteSwiftPackageReference "OAuthenticator" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ChimeHQ/OAuthenticator.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.3.0;
-			};
-		};
-		DD6360202F55211000D8F1C5 /* XCRemoteSwiftPackageReference "Jot" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/mattmassicotte/Jot.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.1.0;
-			};
-		};
 		DD7ADF652F5B9DDF00B069BD /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
@@ -787,26 +773,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		DD6360392F55310800D8F1C5 /* OAuthenticator */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD63601F2F55210000D8F1C5 /* XCRemoteSwiftPackageReference "OAuthenticator" */;
-			productName = OAuthenticator;
-		};
-		DD63603B2F55310E00D8F1C5 /* OAuthenticator */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD63601F2F55210000D8F1C5 /* XCRemoteSwiftPackageReference "OAuthenticator" */;
-			productName = OAuthenticator;
-		};
-		DD63603D2F55404500D8F1C5 /* Jot */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD6360202F55211000D8F1C5 /* XCRemoteSwiftPackageReference "Jot" */;
-			productName = Jot;
-		};
-		DD63603F2F55404A00D8F1C5 /* Jot */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD6360202F55211000D8F1C5 /* XCRemoteSwiftPackageReference "Jot" */;
-			productName = Jot;
-		};
 		DD7ADF662F5B9DDF00B069BD /* PostHog */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = DD7ADF652F5B9DDF00B069BD /* XCRemoteSwiftPackageReference "posthog-ios" */;

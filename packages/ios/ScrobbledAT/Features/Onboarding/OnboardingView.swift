@@ -5,6 +5,7 @@ struct OnboardingView: View {
     @EnvironmentObject var appleSignInService: AppleSignInService
     @State private var showHandleSelection = false
     @State private var handleSelectionData: [String: Any]?
+    @State private var showErrorAlert = false
     
     var body: some View {
         VStack(spacing: 32) {
@@ -48,19 +49,21 @@ struct OnboardingView: View {
                     ProgressView("Signing in...")
                         .padding()
                 }
-                
-                if let error = appleSignInService.error {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
             }
             
             Spacer()
         }
         .padding()
+        .alert("Sign In Failed", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) {
+                appleSignInService.error = nil
+            }
+        } message: {
+            Text(appleSignInService.error ?? "")
+        }
+        .onChange(of: appleSignInService.error) { _, error in
+            showErrorAlert = error != nil
+        }
         .onReceive(NotificationCenter.default.publisher(for: .showHandleSelection)) { notification in
             if let data = notification.object as? [String: Any] {
                 handleSelectionData = data

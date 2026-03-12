@@ -3,6 +3,8 @@ import CoreLocation
 
 @MainActor
 class LocationFeedService: ObservableObject {
+    static let shared = LocationFeedService()
+
     @Published var nearbyPosts: [LocationPost] = []
     @Published var isLoading = false
     @Published var error: String?
@@ -40,6 +42,10 @@ class LocationFeedService: ObservableObject {
     }
     
     func loadNearbyPosts(location: CLLocation) async {
+        guard !isLoading else {
+            print("⏭️ LocationFeedService: loadNearbyPosts — already in flight, skipping")
+            return
+        }
         isLoading = true
         error = nil
         

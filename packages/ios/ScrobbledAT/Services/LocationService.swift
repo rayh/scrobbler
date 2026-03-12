@@ -4,6 +4,8 @@ import UserNotifications
 
 @MainActor
 class LocationService: NSObject, ObservableObject {
+    static let shared = LocationService()
+
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published var currentLocation: CLLocation?
     @Published var error: String?

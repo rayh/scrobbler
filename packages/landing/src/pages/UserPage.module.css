@@ -1,0 +1,138 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem 5rem;
+  background: var(--bg);
+}
+
+.card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+/* Avatar */
+.avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.avatarPlaceholder {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6c63ff, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.skeletonAvatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  margin-bottom: 4px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.handle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: -6px;
+}
+
+.sub {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.dot {
+  color: var(--border);
+}
+
+/* Buttons */
+.openBtn {
+  display: block;
+  width: 100%;
+  background: white;
+  color: black;
+  padding: 14px 24px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-top: 12px;
+  transition: opacity 0.15s;
+}
+
+.openBtn:hover {
+  opacity: 0.88;
+}
+
+.downloadLink {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  margin-top: 4px;
+  transition: color 0.15s;
+}
+
+.downloadLink:hover {
+  color: var(--text);
+}
+
+/* Back logo link */
+.logo {
+  position: fixed;
+  bottom: 1.75rem;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #6c63ff, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.logo:hover {
+  opacity: 1;
+}

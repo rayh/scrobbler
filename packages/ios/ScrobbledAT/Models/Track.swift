@@ -19,6 +19,9 @@ struct Track: Identifiable, Codable {
     
     // Artwork
     var artworkUrl: String?
+
+    // Genres from Apple Music catalog (populated at share time via MusicKit)
+    var genres: [String]?
 }
 
 enum MusicPlatform: String, Codable {

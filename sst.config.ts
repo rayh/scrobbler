@@ -102,13 +102,15 @@ export default $config({
     //   uploads/<userId>/posts/<postId>/voice/<timestamp>.m4a
     // Versioning enabled so old avatars are retained and can be restored if needed.
     // Lifecycle rule expires non-current versions after 30 days.
-    const uploadsBucket = new sst.aws.Bucket("UploadsBucket", {
+    // NOTE: named AvatarBucket/AvatarCdn to match existing Pulumi state — rename would
+    // cause SST to destroy + recreate. The bucket holds all uploads, not just avatars.
+    const uploadsBucket = new sst.aws.Bucket("AvatarBucket", {
       access: "cloudfront",
       versioning: true,
     });
 
     // Expire non-current object versions after 30 days
-    new aws.s3.BucketLifecycleConfigurationV2("UploadsBucketLifecycle", {
+    new aws.s3.BucketLifecycleConfigurationV2("AvatarBucketLifecycle", {
       bucket: uploadsBucket.name,
       rules: [{
         id: "expire-noncurrent",
@@ -117,7 +119,7 @@ export default $config({
       }],
     });
 
-    const uploadsCdn = new sst.aws.Router("UploadsCdn", {
+    const uploadsCdn = new sst.aws.Router("AvatarCdn", {
       domain: {
         name: cdnDomain,
         dns,
@@ -133,20 +135,24 @@ export default $config({
     // non-prod: dev-<stage>.slctr.io
     const landingSite = new sst.aws.StaticSite("LandingSite", {
       path: "packages/landing",
+      build: {
+        command: "npm install && npm run build",
+        output: "dist",
+      },
       domain: {
         name: siteDomain,
         aliases: isProd ? ["www.slctr.io"] : [],
         dns,
       },
       environment: {
-        SLCTR_API_URL: $interpolate`https://${apiDomain}`,
+        VITE_API_URL: $interpolate`https://${apiDomain}`,
       },
-      // Rewrite /u/* to /user.html so CloudFront serves the invite page shell
+      // Rewrite /u/* to /index.html so the React SPA router handles the route
       edge: {
         viewerRequest: {
           injection: `
             if (request.uri.startsWith('/u/')) {
-              request.uri = '/user.html';
+              request.uri = '/index.html';
             }
           `,
         },
@@ -174,13 +180,26 @@ export default $config({
       },
     );
 
-    // Fan-out: copy new posts to follower timelines
+    // ── Fanout queue ──────────────────────────────────────────────────────────
+    // DynamoDB stream → FanoutEnqueue Lambda → SQS → FanoutWorker Lambda
+    // Batch size is tunable; DLQ catches messages that fail 3 times.
+    const fanoutDlq = new aws.sqs.Queue("FanoutDlq", {
+      messageRetentionSeconds: 7 * 24 * 60 * 60, // 7 days
+    });
+
+    const fanoutQueue = new sst.aws.Queue("FanoutQueue", {
+      dlq: fanoutDlq.arn,
+    });
+
     table.subscribe(
       {
-        handler: "packages/functions/src/fanout.handler",
-        environment: { TABLE_NAME: table.name },
+        handler: "packages/functions/src/fanout.enqueue",
+        environment: {
+          TABLE_NAME: table.name,
+          FANOUT_QUEUE_URL: fanoutQueue.url,
+        },
         permissions: [
-          { actions: ["dynamodb:Query", "dynamodb:PutItem"], resources: [table.arn] },
+          { actions: ["sqs:SendMessage"], resources: [fanoutQueue.arn] },
         ],
       },
       {
@@ -190,6 +209,20 @@ export default $config({
           },
         }],
       },
+    );
+
+    fanoutQueue.subscribe(
+      {
+        handler: "packages/functions/src/fanout.worker",
+        environment: { TABLE_NAME: table.name },
+        permissions: [
+          {
+            actions: ["dynamodb:Query", "dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem"],
+            resources: [table.arn],
+          },
+        ],
+      },
+      { batch: { size: 10 } },
     );
 
     // API Gateway
@@ -266,7 +299,7 @@ export default $config({
       handler: "packages/functions/src/me.get",
       environment: { TABLE_NAME: table.name },
       permissions: [
-        { actions: ["dynamodb:GetItem"], resources: [table.arn] },
+        { actions: ["dynamodb:GetItem", "dynamodb:Query"], resources: [table.arn] },
       ],
     }, { auth });
 
@@ -339,6 +372,15 @@ export default $config({
       ],
     }, { auth });
 
+    // Public feed — no auth, used by landing page
+    api.route("GET /feed/public", {
+      handler: "packages/functions/src/feed.publicFeed",
+      environment: { TABLE_NAME: table.name },
+      permissions: [
+        { actions: ["dynamodb:Query"], resources: [table.arn, $interpolate`${table.arn}/index/GSI1`] },
+      ],
+    });
+
     // Share a track — userId comes from JWT sub, handle looked up from profile
     api.route("POST /music/share", {
       handler: "packages/functions/src/music.share",
@@ -366,6 +408,14 @@ export default $config({
 
     api.route("GET /me/following", {
       handler: "packages/functions/src/social.following",
+      environment: { TABLE_NAME: table.name },
+      permissions: [
+        { actions: ["dynamodb:Query"], resources: [table.arn] },
+      ],
+    }, { auth });
+
+    api.route("GET /me/followers", {
+      handler: "packages/functions/src/social.followers",
       environment: { TABLE_NAME: table.name },
       permissions: [
         { actions: ["dynamodb:Query"], resources: [table.arn] },
@@ -414,6 +464,7 @@ export default $config({
       api: api.url,
       apiDomain,
       siteDomain,
+      siteUrl: landingSite.url,
       cdnDomain,
       userPoolId: userPool.id,
       userPoolClientId: userPoolClient.id,

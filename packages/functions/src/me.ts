@@ -15,15 +15,39 @@ function getSub(event: APIGatewayProxyEvent): string | undefined {
 
 const CORS = { "Access-Control-Allow-Origin": "*" };
 
+async function getFollowCounts(userId: string): Promise<{ followersCount: number; followingCount: number }> {
+  const [followersResult, followingResult] = await Promise.all([
+    ddb.send(new QueryCommand({
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "pk = :pk",
+      ExpressionAttributeValues: { ":pk": `user#${userId}#followers` },
+      Select: "COUNT",
+    })),
+    ddb.send(new QueryCommand({
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "pk = :pk",
+      ExpressionAttributeValues: { ":pk": `user#${userId}#following` },
+      Select: "COUNT",
+    })),
+  ]);
+  return {
+    followersCount: followersResult.Count ?? 0,
+    followingCount: followingResult.Count ?? 0,
+  };
+}
+
 export const get = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const sub = getSub(event);
     if (!sub) return { statusCode: 401, body: JSON.stringify({ error: "Unauthorized" }) };
 
-    const result = await ddb.send(new GetCommand({
-      TableName: process.env.TABLE_NAME,
-      Key: { pk: `user#${sub}`, sk: "profile" },
-    }));
+    const [result, followCounts] = await Promise.all([
+      ddb.send(new GetCommand({
+        TableName: process.env.TABLE_NAME,
+        Key: { pk: `user#${sub}`, sk: "profile" },
+      })),
+      getFollowCounts(sub),
+    ]);
 
     return {
       statusCode: 200,
@@ -38,6 +62,8 @@ export const get = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
         location: result.Item?.location ?? null,
         providers: result.Item?.providers ?? [],
         createdAt: result.Item?.createdAt ?? null,
+        followersCount: followCounts.followersCount,
+        followingCount: followCounts.followingCount,
       }),
     };
   } catch (error) {

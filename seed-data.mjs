@@ -73,7 +73,7 @@ const POSTS_BY_HANDLE = {
       track: {
         id: "1498378115", title: "Levitating", artist: "Dua Lipa",
         album: "Future Nostalgia",
-        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/5b/b8/c8/5bb8c8a5-8684-b8b1-4a31-c5f7a06b4e35/20UMGIM13877.rgb.jpg/400x400bb.jpg",
+        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/6c/11/d6/6c11d681-aa3a-d59e-4c2e-f77e181026ab/190295092665.jpg/400x400bb.jpg",
         appleMusicUrl: "https://music.apple.com/us/album/future-nostalgia/1498378108?i=1498378115",
       },
       comment: "The production on this is absolutely insane! 🔥",
@@ -84,7 +84,7 @@ const POSTS_BY_HANDLE = {
       track: {
         id: "1440838686", title: "Bad Guy", artist: "Billie Eilish",
         album: "When We All Fall Asleep, Where Do We Go?",
-        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/59/b8/82/59b882b8-2e11-3c8b-edb2-0e99b3a3b2a7/19UMGIM03883.rgb.jpg/400x400bb.jpg",
+        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/1a/37/d1/1a37d1b1-8508-54f2-f541-bf4e437dda76/19UMGIM05028.rgb.jpg/400x400bb.jpg",
         appleMusicUrl: "https://music.apple.com/us/album/bad-guy/1440838683?i=1440838686",
       },
       comment: "Still hits different every single time 🖤",
@@ -97,7 +97,7 @@ const POSTS_BY_HANDLE = {
       track: {
         id: "1567714698", title: "Good 4 U", artist: "Olivia Rodrigo",
         album: "SOUR",
-        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/d7/f3/36/d7f3366d-8e24-3e19-a5c2-c1c5f7f7f7f7/21UMGIM29757.rgb.jpg/400x400bb.jpg",
+        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/76/46/48/76464884-0e9c-1951-a3f6-ce02f74c2b19/21UMGIM26093.rgb.jpg/400x400bb.jpg",
         appleMusicUrl: "https://music.apple.com/us/album/sour/1567714688?i=1567714698",
       },
       comment: "Olivia's songwriting is next level 🎵",
@@ -108,7 +108,7 @@ const POSTS_BY_HANDLE = {
       track: {
         id: "1544494715", title: "Blinding Lights", artist: "The Weeknd",
         album: "After Hours",
-        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/ef/6f/04/ef6f049c-ce6f-dc2e-1c65-c8b5-b5b5b5b5b5b5/20UMGIM24697.rgb.jpg/400x400bb.jpg",
+        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a6/6e/bf/a66ebf79-5008-8948-b352-a790fc87446b/19UM1IM04638.rgb.jpg/400x400bb.jpg",
         appleMusicUrl: "https://music.apple.com/us/album/after-hours/1499378108?i=1499378112",
       },
       comment: "Absolute classic. Never gets old 🌃",
@@ -121,7 +121,7 @@ const POSTS_BY_HANDLE = {
       track: {
         id: "1485802976", title: "Watermelon Sugar", artist: "Harry Styles",
         album: "Fine Line",
-        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/ad/ae/ba/adaeba4c-8b33-c5d9-e6b4-f5e2-f5e2f5e2f5e2/19UMGIM66701.rgb.jpg/400x400bb.jpg",
+        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/2b/c4/c9/2bc4c9d4-3bc6-ab13-3f71-df0b89b173de/886448022213.jpg/400x400bb.jpg",
         appleMusicUrl: "https://music.apple.com/us/album/fine-line/1485802965?i=1485802976",
       },
       comment: "Summer vibes all year round ☀️",
@@ -132,7 +132,7 @@ const POSTS_BY_HANDLE = {
       track: {
         id: "1522776464", title: "Heat Waves", artist: "Glass Animals",
         album: "Dreamland",
-        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/33/7c/6e/337c6ef3-cc8e-1034-cf4c-7f7f7f7f7f7f/21UMGIM21200.rgb.jpg/400x400bb.jpg",
+        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/da/8b/77/da8b7731-6f4f-eacf-5e74-8b23389eefa1/20UMGIM03371.rgb.jpg/400x400bb.jpg",
         appleMusicUrl: "https://music.apple.com/us/album/dreamland/1522776454?i=1522776464",
       },
       comment: "Glass Animals never disappoints 🌊",
@@ -145,7 +145,7 @@ const POSTS_BY_HANDLE = {
       track: {
         id: "1576845644", title: "Stay", artist: "The Kid LAROI & Justin Bieber",
         album: "F*CK LOVE 3",
-        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/6a/4b/2c/6a4b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d/21UMGIM65439.rgb.jpg/400x400bb.jpg",
+        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/89/59/6a/89596ab9-fa3c-8d08-4d95-a6450fa2013c/886449400515.jpg/400x400bb.jpg",
         appleMusicUrl: "https://music.apple.com/us/album/stay-single/1576845642?i=1576845644",
       },
       comment: "This collab hits different 🎤",
@@ -156,7 +156,7 @@ const POSTS_BY_HANDLE = {
       track: {
         id: "1544457069", title: "Montero (Call Me by Your Name)", artist: "Lil Nas X",
         album: "MONTERO",
-        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/7a/8b/9c/7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d/21UMGIM73458.rgb.jpg/400x400bb.jpg",
+        artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/8d/ef/37/8def37cf-f641-1bba-f312-61a9b8d19fbf/886449068029.jpg/400x400bb.jpg",
         appleMusicUrl: "https://music.apple.com/us/album/montero/1571208585?i=1571208587",
       },
       comment: "Can't get this out of my head 🎸",
@@ -166,7 +166,31 @@ const POSTS_BY_HANDLE = {
   ],
 };
 
-// Sydney location (H3 resolution 8)
+// Ray's own posts — added to his feed directly (he follows himself implicitly via own timeline)
+const RAY_POSTS = [
+  {
+    track: {
+      id: "1440837621", title: "Closer", artist: "Nine Inch Nails",
+      album: "The Downward Spiral",
+      artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/55/e0/85/55e0851e-11df-3b6a-7c54-4eef0efc2bed/15UMGIM67680.rgb.jpg/400x400bb.jpg",
+      appleMusicUrl: "https://music.apple.com/us/album/closer/1440837096?i=1440837621",
+    },
+    comment: "Still as intense as the first time I heard it 🖤",
+    tags: ["nin", "industrial", "classic"],
+    hoursAgo: 1,
+  },
+  {
+    track: {
+      id: "1846649031", title: "Birds and the Bees", artist: "Dub Fx",
+      album: "Thinking Clear",
+      artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/b1/69/a6/b169a655-f28a-51d1-50e8-fa966fca9f7f/5043.jpg/400x400bb.jpg",
+      appleMusicUrl: "https://music.apple.com/us/album/birds-and-the-bees/1846649030?i=1846649031",
+    },
+    comment: "Dub FX doing what he does best 🎙️",
+    tags: ["dubfx", "beatbox", "loopstation"],
+    hoursAgo: 4,
+  },
+];
 const LOCATION = {
   latitude:   -33.8688,
   longitude:  151.2093,
@@ -323,7 +347,7 @@ async function followFakeUsers(idToken) {
 }
 
 async function writeFakePosts() {
-  console.log("\n🎵 Writing fake posts (DDB stream will fan out to ray's timeline)...");
+  console.log("\n🎵 Writing fake posts and timeline items...");
 
   const TTL_7D  = Math.floor(Date.now() / 1000) + 7  * 24 * 60 * 60;
   const TTL_3D  = Math.floor(Date.now() / 1000) + 3  * 24 * 60 * 60;
@@ -335,6 +359,7 @@ async function writeFakePosts() {
       const ts        = Date.now() - postDef.hoursAgo * 60 * 60 * 1000;
       const id        = postId();
       const createdAt = new Date(ts).toISOString();
+      const trackKey  = `${postDef.track.title.toLowerCase().replace(/[^a-z0-9]/g,'')}#${postDef.track.artist.toLowerCase().replace(/[^a-z0-9]/g,'')}`;
 
       const basePost = {
         postId:     id,
@@ -344,6 +369,7 @@ async function writeFakePosts() {
         track:      postDef.track,
         comment:    postDef.comment,
         tags:       postDef.tags,
+        trackKey,
         createdAt,
         timestamp:  ts,
         likes:      0,
@@ -353,37 +379,49 @@ async function writeFakePosts() {
         gsi1sk:    `${ts}#${id}`,
       };
 
-      // 1. User post item — this is what triggers the DDB stream → fanout.ts
+      // 1. User post item
+      await ddb.send(new PutCommand({
+        TableName: TABLE,
+        Item: { pk: `user#${user.sub}#posts`, sk: `post#${ts}#${id}`, ...basePost },
+      }));
+
+      // 2. Write directly to ray's timeline (don't rely on stream fanout timing)
+      const intro = {
+        postId:       id,
+        userId:       user.sub,
+        userHandle:   user.handle,
+        voiceMemoUrl: null,
+        transcript:   postDef.comment,
+        tags:         postDef.tags,
+        createdAt,
+      };
       await ddb.send(new PutCommand({
         TableName: TABLE,
         Item: {
-          pk: `user#${user.sub}#posts`,
-          sk: `post#${ts}#${id}`,
-          ...basePost,
+          pk:            `timeline#${RAY_SUB}`,
+          sk:            `post#${ts}#${trackKey}`,
+          groupId:       `post#${ts}#${trackKey}`,
+          trackKey,
+          track:         postDef.track,
+          windowStart:   createdAt,
+          lastUpdatedAt: createdAt,
+          sharedBy:      [intro],
+          likes:         0,
+          location:      LOCATION,
+          ttl:           TTL_7D,
         },
       }));
 
-      // 2. Primary location item (for location feed)
+      // 3. Primary location item (for location feed)
       await ddb.send(new PutCommand({
         TableName: TABLE,
-        Item: {
-          pk: `location#${LOCATION.hex}`,
-          sk: `${ts}#${id}`,
-          ...basePost,
-          ttl: TTL_7D,
-        },
+        Item: { pk: `location#${LOCATION.hex}`, sk: `${ts}#${id}`, ...basePost, ttl: TTL_7D },
       }));
 
-      // 3. Adjacent hex item (for nearby feed ring)
+      // 4. Adjacent hex item (for nearby feed ring)
       await ddb.send(new PutCommand({
         TableName: TABLE,
-        Item: {
-          pk:     `location#${ADJACENT_HEX}`,
-          sk:     `${ts}#${id}`,
-          ...basePost,
-          nearby: true,
-          ttl:    TTL_3D,
-        },
+        Item: { pk: `location#${ADJACENT_HEX}`, sk: `${ts}#${id}`, ...basePost, nearby: true, ttl: TTL_3D },
       }));
 
       console.log(`   ✅ @${user.handle}: "${postDef.track.title}" (${postDef.hoursAgo}h ago)`);
@@ -393,6 +431,85 @@ async function writeFakePosts() {
     }
   }
 }
+
+async function writeRayPosts(idToken) {
+  console.log("\n🎵 Writing ray's own posts directly to timeline...");
+
+  const TTL_7D = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
+  const TTL_3D = Math.floor(Date.now() / 1000) + 3 * 24 * 60 * 60;
+
+  for (const postDef of RAY_POSTS) {
+    const ts        = Date.now() - postDef.hoursAgo * 60 * 60 * 1000;
+    const id        = postId();
+    const createdAt = new Date(ts).toISOString();
+    const trackKey  = `${postDef.track.title.toLowerCase().replace(/[^a-z0-9]/g,'')}#${postDef.track.artist.toLowerCase().replace(/[^a-z0-9]/g,'')}`;
+
+    const basePost = {
+      postId:     id,
+      userId:     RAY_SUB,
+      userHandle: "ray",
+      userName:   "Ray",
+      track:      postDef.track,
+      comment:    postDef.comment,
+      tags:       postDef.tags,
+      trackKey,
+      createdAt,
+      timestamp:  ts,
+      likes:      0,
+      reposts:    0,
+      location:   LOCATION,
+      gsi1pk:    `location#${LOCATION.hex}`,
+      gsi1sk:    `${ts}#${id}`,
+    };
+
+    // User post item
+    await ddb.send(new PutCommand({
+      TableName: TABLE,
+      Item: { pk: `user#${RAY_SUB}#posts`, sk: `post#${ts}#${id}`, ...basePost },
+    }));
+
+    // Write directly to ray's own timeline (he doesn't follow himself)
+    const intro = {
+      postId:       id,
+      userId:       RAY_SUB,
+      userHandle:   "ray",
+      voiceMemoUrl: null,
+      transcript:   postDef.comment,
+      tags:         postDef.tags,
+      createdAt,
+    };
+    await ddb.send(new PutCommand({
+      TableName: TABLE,
+      Item: {
+        pk:            `timeline#${RAY_SUB}`,
+        sk:            `post#${ts}#${trackKey}`,
+        groupId:       `post#${ts}#${trackKey}`,
+        trackKey,
+        track:         postDef.track,
+        windowStart:   createdAt,
+        lastUpdatedAt: createdAt,
+        sharedBy:      [intro],
+        likes:         0,
+        location:      LOCATION,
+        ttl:           TTL_7D,
+      },
+    }));
+
+    // Location items
+    await ddb.send(new PutCommand({
+      TableName: TABLE,
+      Item: { pk: `location#${LOCATION.hex}`, sk: `${ts}#${id}`, ...basePost, ttl: TTL_7D },
+    }));
+    await ddb.send(new PutCommand({
+      TableName: TABLE,
+      Item: { pk: `location#${ADJACENT_HEX}`, sk: `${ts}#${id}`, ...basePost, nearby: true, ttl: TTL_3D },
+    }));
+
+    console.log(`   ✅ @ray: "${postDef.track.title}" (${postDef.hoursAgo}h ago)`);
+    await new Promise(r => setTimeout(r, 10));
+  }
+}
+
 
 async function waitForFanout() {
   process.stdout.write("\n⏳ Waiting 4s for DynamoDB stream fan-out...");
@@ -422,23 +539,23 @@ async function main() {
     console.warn("   Skipping follow step — run again after signing in on device.\n");
   }
 
+  // Follows MUST be written before posts so the DDB stream fanout
+  // finds follower edges when it fires.
   if (idToken) {
     await followFakeUsers(idToken);
   }
 
   await writeFakePosts();
-
-  if (idToken) {
-    await waitForFanout();
-  }
+  await writeRayPosts(idToken);
 
   console.log("🎉 Seed complete!");
   console.log("\n📊 Summary:");
   console.log(`   👤 ray's profile: updated`);
   console.log(`   👥 Fake users:    ${FAKE_USERS.length} (${FAKE_USERS.map(u => "@" + u.handle).join(", ")})`);
-  console.log(`   🎵 Posts:         ${FAKE_USERS.length * 2} (${FAKE_USERS.length * 2 * 3} DDB items including location)`);
+  console.log(`   🎵 Fake posts:    ${FAKE_USERS.length * 2}`);
+  console.log(`   🎵 Ray's posts:   ${RAY_POSTS.length} (written directly to timeline)`);
   console.log(`   🤝 Follows:       ${idToken ? FAKE_USERS.length : "skipped (no idToken)"}`);
-  console.log(`   📰 Timeline:      ${idToken ? "built via fanout Lambda" : "skipped"}`);
+  console.log(`   📰 Timeline:      ${idToken ? "built via fanout Lambda + ray's direct posts" : "ray's posts only"}`);
 }
 
 main().catch(err => { console.error("\n❌", err.message); process.exit(1); });

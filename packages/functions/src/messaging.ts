@@ -44,11 +44,14 @@ async function sendNewPostNotification(postItem: any) {
     
     if (!userId || !userHandle || !trackTitle || !postId) return;
     
-    await sendToFollowers(userId, userHandle, trackTitle, trackArtist, postId);
-    
-    if (locationHex) {
-      await sendLocationBasedNotifications(locationHex, userId, userHandle, trackTitle, trackArtist, postId);
-    }
+    // Fire alert push and silent background-sync push in parallel
+    await Promise.all([
+      sendToFollowers(userId, userHandle, trackTitle, trackArtist, postId),
+      sendBackgroundSyncToFollowers(userId),
+      locationHex
+        ? sendLocationBasedNotifications(locationHex, userId, userHandle, trackTitle, trackArtist, postId)
+        : Promise.resolve(),
+    ]);
   } catch (error) {
     console.error("Send new post notification error:", error);
   }
@@ -73,6 +76,63 @@ async function sendToFollowers(userId: string, userHandle: string, trackTitle: s
       { type: "new_post", userId, postId }
     );
   }
+}
+
+/**
+ * Send a silent background push (content-available: 1, no alert) to all followers
+ * so the app can wake in the background and sync the Apple Music playlist.
+ */
+async function sendBackgroundSyncToFollowers(userId: string) {
+  const result = await ddb.send(new QueryCommand({
+    TableName: process.env.TABLE_NAME,
+    KeyConditionExpression: "pk = :pk",
+    ExpressionAttributeValues: { ":pk": `user#${userId}#followers` },
+  }));
+
+  const followers = result.Items || [];
+  if (!followers.length) return;
+
+  await Promise.all(followers.map(follower =>
+    sendBackgroundSyncToUser(follower.followerId)
+  ));
+}
+
+async function sendBackgroundSyncToUser(userId: string) {
+  const endpoints = await ddb.send(new QueryCommand({
+    TableName: process.env.TABLE_NAME,
+    KeyConditionExpression: "pk = :pk",
+    ExpressionAttributeValues: { ":pk": `user#${userId}#endpoints` },
+  }));
+
+  if (!endpoints.Items?.length) return;
+
+  const apnsKey = process.env.IS_PROD === "true" ? "APNS" : "APNS_SANDBOX";
+
+  // Silent background push: aps has content-available=1 and NO alert/sound/badge.
+  // iOS will wake the app (or a suspended instance) to call the background fetch handler.
+  const message = JSON.stringify({
+    default: "",
+    [apnsKey]: JSON.stringify({
+      aps: { "content-available": 1 },
+      data: { type: "feed_sync" },
+    }),
+  });
+
+  await Promise.allSettled(endpoints.Items.map(async (endpoint) => {
+    try {
+      await sns.send(new PublishCommand({
+        TargetArn: endpoint.endpointArn,
+        Message: message,
+        MessageStructure: "json",
+      }));
+    } catch (err: any) {
+      if (err.name === "EndpointDisabled" || err.message?.includes("Unregistered")) {
+        await removeEndpoint(endpoint.pk, endpoint.sk);
+      } else {
+        console.error("Failed to send background sync to endpoint:", endpoint.endpointArn, err);
+      }
+    }
+  }));
 }
 
 async function sendLocationBasedNotifications(locationHex: string, posterId: string, userHandle: string, trackTitle: string, trackArtist: string | undefined, postId: string) {

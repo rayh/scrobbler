@@ -3,6 +3,19 @@ import { DynamoDBDocumentClient, PutCommand, DeleteCommand, QueryCommand, GetCom
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { latLngToCell, cellToBoundary, gridDisk } from "h3-js";
 
+const GROUPING_WINDOW_DAYS = 14;
+
+/**
+ * Compute a stable, normalised key for a track.
+ * Prefers ISRC (globally unique per recording) when available.
+ * Falls back to slug(title)#slug(artist) — lowercase, alphanumeric only.
+ */
+function computeTrackKey(track: { isrc?: string; title: string; artist: string }): string {
+  if (track.isrc) return `isrc#${track.isrc.toLowerCase()}`;
+  const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return `${slug(track.title)}#${slug(track.artist)}`;
+}
+
 const client = new DynamoDBClient({});
 const ddb = DynamoDBDocumentClient.from(client);
 
@@ -24,7 +37,7 @@ export const share = async (event: APIGatewayProxyEvent): Promise<APIGatewayProx
       };
     }
 
-    const { track, comment, tags, location } = JSON.parse(event.body || "{}");
+    const { track, tags, location, voiceMemoUrl, transcript } = JSON.parse(event.body || "{}");
 
     if (!track) {
       return {
@@ -52,6 +65,38 @@ export const share = async (event: APIGatewayProxyEvent): Promise<APIGatewayProx
       };
     }
 
+    // Compute stable track key for grouping / duplicate detection
+    const trackKey = computeTrackKey(track);
+
+    // Duplicate share guard: reject if this user shared the same track within the window
+    const windowStart = new Date(Date.now() - GROUPING_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const recentCheck = await ddb.send(new QueryCommand({
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "pk = :pk AND sk > :minSk",
+      FilterExpression: "trackKey = :trackKey",
+      ExpressionAttributeValues: {
+        ":pk": `user#${userId}#posts`,
+        ":minSk": `post#${new Date(Date.now() - GROUPING_WINDOW_DAYS * 24 * 60 * 60 * 1000).getTime()}`,
+        ":trackKey": trackKey,
+      },
+      Limit: 1,
+    }));
+
+    if (recentCheck.Items && recentCheck.Items.length > 0) {
+      const existing = recentCheck.Items[0];
+      const sharedAt = new Date(existing.createdAt as string);
+      const daysSince = Math.floor((Date.now() - sharedAt.getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        statusCode: 409,
+        headers: { "Access-Control-Allow-Origin": "*" },
+        body: JSON.stringify({
+          error: `You shared this track ${daysSince === 0 ? "today" : `${daysSince} day${daysSince === 1 ? "" : "s"} ago`}`,
+          daysSince,
+          existingPostId: existing.postId,
+        }),
+      };
+    }
+
     const timestamp = Date.now();
     const postId = `post-${timestamp}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -63,12 +108,17 @@ export const share = async (event: APIGatewayProxyEvent): Promise<APIGatewayProx
       userHandle,
       userName,
       track,
-      comment,
+      trackKey,
+      voiceMemoUrl: voiceMemoUrl || null,
+      transcript: transcript || null,
       tags: tags || [],
       createdAt: new Date().toISOString(),
       timestamp,
       likes: 0,
       reposts: 0,
+      // Global feed index — every post is queryable as a reverse-chron global feed
+      gsi1pk: "global#feed",
+      gsi1sk: `${timestamp}#${postId}`,
     };
 
     let locationHex: string | undefined;
@@ -82,8 +132,6 @@ export const share = async (event: APIGatewayProxyEvent): Promise<APIGatewayProx
               hex: (locationHex = latLngToCell(location.latitude, location.longitude, LOCATION_RESOLUTION)),
               resolution: LOCATION_RESOLUTION,
             },
-            gsi1pk: `location#${locationHex}`,
-            gsi1sk: `${timestamp}#${postId}`,
           }
         : postBase;
 
@@ -98,7 +146,9 @@ export const share = async (event: APIGatewayProxyEvent): Promise<APIGatewayProx
         userHandle,
         userName,
         track,
-        comment,
+        trackKey,
+        voiceMemoUrl: voiceMemoUrl || null,
+        transcript: transcript || null,
         tags: tags || [],
         createdAt: post.createdAt,
         location: locationData,

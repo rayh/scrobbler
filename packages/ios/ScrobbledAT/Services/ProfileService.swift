@@ -7,6 +7,7 @@ class ProfileService: ObservableObject {
     static let shared = ProfileService()
 
     @Published var profile: UserProfile?
+    @Published var posts: [UserProfileData.UserProfilePost] = []
     @Published var isLoading = false
     @Published var isUploadingAvatar = false
     @Published var error: String?
@@ -19,6 +20,8 @@ class ProfileService: ObservableObject {
         var avatarUrl: String?
         var location: ProfileLocation?
         var createdAt: String?
+        var followersCount: Int
+        var followingCount: Int
     }
 
     struct ProfileLocation: Codable {
@@ -31,20 +34,64 @@ class ProfileService: ObservableObject {
     }
 
     private let apiBaseUrl = Config.apiBaseUrl
+    private static let cacheTTL: TimeInterval = 30
+    private var lastLoadedAt: Date?
 
-    // MARK: - Load own profile
+    // MARK: - Computed: own profile as UserProfileData (for UserProfileView)
 
-    func loadMyProfile() async {
+    var ownProfileData: UserProfileData? {
+        guard let p = profile else { return nil }
+        return UserProfileData(
+            userId: p.userId,
+            handle: p.handle,
+            name: p.name,
+            bio: p.bio,
+            avatarUrl: p.avatarUrl,
+            locationCity: p.location?.city,
+            locationCountry: p.location?.country,
+            createdAt: p.createdAt,
+            followersCount: p.followersCount,
+            followingCount: p.followingCount,
+            posts: posts
+        )
+    }
+
+    // MARK: - Load own profile + posts
+
+    func loadMyProfile(force: Bool = false) async {
+        guard force || profile == nil || lastLoadedAt.map({ Date().timeIntervalSince($0) > Self.cacheTTL }) ?? true else {
+            print("⏭️ ProfileService: loadMyProfile — cache still fresh, skipping")
+            return
+        }
+        guard !isLoading else {
+            print("⏭️ ProfileService: loadMyProfile — already in flight, skipping")
+            return
+        }
         guard let idToken = KeychainService.shared.get(key: "idToken") else { return }
         isLoading = true
         error = nil
         do {
-            var req = URLRequest(url: URL(string: "\(apiBaseUrl)/me")!)
-            req.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await URLSession.shared.data(for: req)
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
-            profile = parseProfile(json)
-            // Keep PostHog person properties current
+            var profileReq = URLRequest(url: URL(string: "\(apiBaseUrl)/me")!)
+            profileReq.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+
+            var postsReq = URLRequest(url: URL(string: "\(apiBaseUrl)/me/posts")!)
+            postsReq.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+
+            async let profileFetch = URLSession.shared.data(for: profileReq)
+            async let postsFetch = URLSession.shared.data(for: postsReq)
+
+            let (profileData, _) = try await profileFetch
+            let (postsData, _) = try await postsFetch
+
+            guard let profileJson = try JSONSerialization.jsonObject(with: profileData) as? [String: Any] else {
+                isLoading = false; return
+            }
+            let postsArray = (try? JSONSerialization.jsonObject(with: postsData) as? [String: Any])?["posts"] as? [[String: Any]] ?? []
+
+            profile = parseProfile(profileJson)
+            posts = parsePosts(postsArray)
+            lastLoadedAt = Date()
+
             if let p = profile {
                 Analytics.identify(
                     userId: p.userId,
@@ -80,9 +127,9 @@ class ProfileService: ObservableObject {
             req.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
             req.httpBody = try JSONSerialization.data(withJSONObject: body)
             let (_, _) = try await URLSession.shared.data(for: req)
-            // Update local state
             if let bio { profile?.bio = bio }
             if let location { profile?.location = location }
+            lastLoadedAt = nil
         } catch {
             self.error = error.localizedDescription
         }
@@ -90,24 +137,23 @@ class ProfileService: ObservableObject {
 
     // MARK: - Avatar upload
 
-    /// Resize, convert to WebP, upload via pre-signed URL, update local state.
     func uploadAvatar(_ imageData: Data) async {
         guard let image = UIImage(data: imageData) else {
-            error = "Invalid image data"
-            return
+            error = "Invalid image data"; return
         }
         isUploadingAvatar = true
         error = nil
         do {
             let cdnUrl = try await UploadService.shared.uploadImage(image, type: .avatar)
             profile?.avatarUrl = cdnUrl
+            lastLoadedAt = nil
         } catch {
             self.error = error.localizedDescription
         }
         isUploadingAvatar = false
     }
 
-    // MARK: - Reverse geocode location to city/country
+    // MARK: - Reverse geocode
 
     func reverseGeocodeCurrentLocation(_ location: CLLocation) async -> ProfileLocation? {
         let geocoder = CLGeocoder()
@@ -140,11 +186,36 @@ class ProfileService: ObservableObject {
             bio: json["bio"] as? String,
             avatarUrl: json["avatarUrl"] as? String,
             location: loc,
-            createdAt: json["createdAt"] as? String
+            createdAt: json["createdAt"] as? String,
+            followersCount: json["followersCount"] as? Int ?? 0,
+            followingCount: json["followingCount"] as? Int ?? 0
         )
+    }
+
+    private func parsePosts(_ raw: [[String: Any]]) -> [UserProfileData.UserProfilePost] {
+        raw.compactMap { p in
+            guard let postId = p["postId"] as? String,
+                  let track = p["track"] as? [String: Any],
+                  let title = track["title"] as? String,
+                  let artist = track["artist"] as? String else { return nil }
+            return UserProfileData.UserProfilePost(
+                id: postId,
+                track: .init(
+                    title: title,
+                    artist: artist,
+                    album: track["album"] as? String,
+                    artwork: track["artwork"] as? String,
+                    appleMusicUrl: track["appleMusicUrl"] as? String
+                ),
+                comment: p["comment"] as? String,
+                tags: p["tags"] as? [String] ?? [],
+                createdAt: p["createdAt"] as? String ?? ""
+            )
+        }
     }
 }
 
 private extension String {
     var nonEmpty: String? { isEmpty ? nil : self }
 }
+

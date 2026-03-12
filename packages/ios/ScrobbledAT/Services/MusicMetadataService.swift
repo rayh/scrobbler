@@ -8,20 +8,27 @@ class MusicMetadataService: @unchecked Sendable {
     func extractMetadata(from urlString: String) async throws -> Track {
         logger.info("🔍 Starting metadata extraction for URL: \(urlString)")
         
-        // Parse URL first
         guard let url = URL(string: urlString) else {
             logger.error("❌ Invalid URL: \(urlString)")
             throw MusicError.invalidURL
         }
         
-        logger.info("🔗 Host: \(url.host ?? "none")")
+        let host = url.host ?? ""
+        logger.info("🔗 Host: \(host)")
         
-        // Check if it's Apple Music
-        guard let host = url.host, host.contains("music.apple.com") else {
-            logger.error("❌ Only Apple Music URLs supported for now")
+        if host.contains("music.apple.com") {
+            return try await extractFromAppleMusicURL(url: url)
+        } else if host.contains("spotify.com") || host.contains("spoti.fi") {
+            return try extractFromSpotifyURL(url: url)
+        } else {
+            logger.error("❌ Unsupported platform host: \(host)")
             throw MusicError.unsupportedPlatform
         }
-        
+    }
+
+    // MARK: - Apple Music
+
+    private func extractFromAppleMusicURL(url: URL) async throws -> Track {
         // MUST have MusicKit authorization to get metadata
         let authStatus = MusicAuthorization.currentStatus
         logger.info("🎵 MusicKit status: \(String(describing: authStatus))")
@@ -37,7 +44,7 @@ class MusicMetadataService: @unchecked Sendable {
             }
         }
         
-        // Extract track ID from Apple Music URL
+        // Extract track ID from Apple Music URL (the `i` query param)
         guard let trackId = extractTrackId(from: url) else {
             logger.error("❌ Could not extract track ID from URL")
             throw MusicError.invalidURL
@@ -45,7 +52,6 @@ class MusicMetadataService: @unchecked Sendable {
         
         logger.info("🍎 Found track ID: \(trackId)")
         
-        // Search MusicKit for the track
         do {
             let musicItemID = MusicItemID(trackId)
             let request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: musicItemID)
@@ -57,27 +63,47 @@ class MusicMetadataService: @unchecked Sendable {
                 logger.error("❌ Track not found in MusicKit")
                 throw MusicError.searchFailed("Track not found")
             }
-            
-            logger.info("✅ Found: \(song.title) by \(song.artistName)")
-            
+
+            var loadedSong = song
+            if song.genres == nil {
+                if let withGenres = try? await song.with([.genres]) {
+                    loadedSong = withGenres
+                }
+            }
+            let genreNames = loadedSong.genres?.compactMap { $0.name } ?? []
+
+            logger.info("✅ Found: \(song.title) by \(song.artistName), genres: \(genreNames)")
+
             return Track(
-                id: song.id.rawValue,
-                title: song.title,
-                artist: song.artistName,
-                album: song.albumTitle,
-                isrc: song.isrc,
+                id: loadedSong.id.rawValue,
+                title: loadedSong.title,
+                artist: loadedSong.artistName,
+                album: loadedSong.albumTitle,
+                isrc: loadedSong.isrc,
                 spotifyUrl: nil,
                 appleMusicUrl: url.absoluteString,
                 youtubeMusicUrl: nil,
                 sourceUrl: url.absoluteString,
                 sourcePlatform: .appleMusic,
-                artworkUrl: song.artwork?.url(width: 300, height: 300)?.absoluteString
+                artworkUrl: loadedSong.artwork?.url(width: 300, height: 300)?.absoluteString,
+                genres: genreNames.isEmpty ? nil : genreNames
             )
-            
+        } catch let error as MusicError {
+            throw error
         } catch {
             logger.error("❌ MusicKit search failed: \(error)")
             throw MusicError.searchFailed(error.localizedDescription)
         }
+    }
+
+    // MARK: - Spotify
+
+    /// Parses a Spotify track URL and returns a Track with basic info from the URL.
+    /// Spotify track URLs look like: https://open.spotify.com/track/<trackId>
+    /// Short links (spoti.fi) redirect — we use the path-based trackId directly.
+    private func extractFromSpotifyURL(url: URL) throws -> Track {
+        logger.info("🎵 Processing Spotify URL: \(url.absoluteString)")
+        return try parseSpotifyURL(url: url)
     }
     
     private func extractFromAppleMusic(url: URL) async throws -> Track {
@@ -114,19 +140,28 @@ class MusicMetadataService: @unchecked Sendable {
                 
                 if let song = response.items.first {
                     logger.info("✅ Enhanced track with MusicKit: \(song.title) by \(song.artistName)")
-                    
+
+                    var loadedSong = song
+                    if song.genres == nil {
+                        if let withGenres = try? await song.with([.genres]) {
+                            loadedSong = withGenres
+                        }
+                    }
+                    let genreNames = loadedSong.genres?.compactMap { $0.name } ?? []
+
                     return Track(
-                        id: song.id.rawValue,
-                        title: song.title,
-                        artist: song.artistName,
-                        album: song.albumTitle,
-                        isrc: song.isrc,
+                        id: loadedSong.id.rawValue,
+                        title: loadedSong.title,
+                        artist: loadedSong.artistName,
+                        album: loadedSong.albumTitle,
+                        isrc: loadedSong.isrc,
                         spotifyUrl: nil,
                         appleMusicUrl: url.absoluteString,
                         youtubeMusicUrl: nil,
                         sourceUrl: url.absoluteString,
                         sourcePlatform: .appleMusic,
-                        artworkUrl: song.artwork?.url(width: 300, height: 300)?.absoluteString
+                        artworkUrl: loadedSong.artwork?.url(width: 300, height: 300)?.absoluteString,
+                        genres: genreNames.isEmpty ? nil : genreNames
                     )
                 }
             } catch {

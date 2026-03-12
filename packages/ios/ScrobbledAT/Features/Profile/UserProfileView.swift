@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import CoreLocation
 
 // MARK: - Data model
 
@@ -11,6 +13,8 @@ struct UserProfileData {
     var locationCity: String?
     var locationCountry: String?
     var createdAt: String?
+    var followersCount: Int
+    var followingCount: Int
     var posts: [UserProfilePost]
 
     var locationDisplay: String? {
@@ -31,6 +35,38 @@ struct UserProfileData {
             let artwork: String?
             let appleMusicUrl: String?
         }
+
+        /// Convert to FeedService.FeedGroup for use with FeedPostCell.
+        func asFeedGroup(userHandle: String) -> FeedService.FeedGroup {
+            FeedService.FeedGroup(
+                groupId: id,
+                trackKey: nil,
+                track: FeedService.FeedGroup.TrackInfo(
+                    id: "",
+                    title: track.title,
+                    artist: track.artist,
+                    album: track.album,
+                    artwork: track.artwork,
+                    appleMusicUrl: track.appleMusicUrl,
+                    spotifyUrl: nil
+                ),
+                windowStart: createdAt,
+                lastUpdatedAt: createdAt,
+                sharedBy: [
+                    FeedService.FeedGroup.SharedByEntry(
+                        postId: id,
+                        userId: "",
+                        userHandle: userHandle,
+                        voiceMemoUrl: nil,
+                        transcript: comment,
+                        tags: tags,
+                        createdAt: createdAt
+                    )
+                ],
+                likes: 0,
+                location: nil
+            )
+        }
     }
 }
 
@@ -41,17 +77,32 @@ class UserProfileViewModel: ObservableObject {
     @Published var profileData: UserProfileData?
     @Published var isLoading = false
     @Published var isFollowLoading = false
+    @Published var followError: String?
     @Published var error: String?
 
     private let apiBaseUrl = Config.apiBaseUrl
+    private static let cacheTTL: TimeInterval = 30
+    private var lastLoadedAt: Date?
+    private var lastLoadedHandle: String?
 
-    func load(handle: String) async {
+    private func isFresh(for key: String) -> Bool {
+        guard lastLoadedHandle == key, let t = lastLoadedAt else { return false }
+        return Date().timeIntervalSince(t) < Self.cacheTTL
+    }
+
+    func load(handle: String, force: Bool = false) async {
+        guard force || !isFresh(for: handle) else {
+            print("⏭️ UserProfileVM: /users/\(handle) — cache still fresh, skipping")
+            return
+        }
         isLoading = true
         error = nil
+        print("➡️ UserProfileVM: GET /users/\(handle)")
         do {
             guard let url = URL(string: "\(apiBaseUrl)/users/\(handle.lowercased())") else { return }
             let (data, response) = try await URLSession.shared.data(for: URLRequest(url: url))
             guard let http = response as? HTTPURLResponse else { return }
+            print("✅ UserProfileVM: /users/\(handle) → HTTP \(http.statusCode)")
             if http.statusCode == 404 {
                 error = "User not found"
                 isLoading = false
@@ -59,7 +110,10 @@ class UserProfileViewModel: ObservableObject {
             }
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
             profileData = parseProfile(json)
+            lastLoadedHandle = handle
+            lastLoadedAt = Date()
         } catch {
+            print("❌ UserProfileVM: /users/\(handle) threw \(error)")
             self.error = error.localizedDescription
         }
         isLoading = false
@@ -68,17 +122,19 @@ class UserProfileViewModel: ObservableObject {
     func toggleFollow(handle: String) async {
         let socialService = SocialService.shared
         isFollowLoading = true
+        followError = nil
+        socialService.error = nil
         if socialService.isFollowing(handle: handle) {
             await socialService.unfollow(handle: handle)
         } else {
             await socialService.follow(handle: handle)
         }
+        followError = socialService.error
         isFollowLoading = false
-        // Reload following list so isFollowing reflects truth
         await socialService.loadFollowing()
     }
 
-    private func parseProfile(_ json: [String: Any]) -> UserProfileData {
+    private func parseProfile(_ json: [String: Any], rawPosts overridePosts: [[String: Any]]? = nil) -> UserProfileData {
         var city: String?
         var country: String?
         if let loc = json["location"] as? [String: Any] {
@@ -86,8 +142,8 @@ class UserProfileViewModel: ObservableObject {
             country = loc["country"] as? String
         }
 
-        let rawPosts = json["posts"] as? [[String: Any]] ?? []
-        let posts: [UserProfileData.UserProfilePost] = rawPosts.compactMap { p in
+        let rawPostsArray = overridePosts ?? (json["posts"] as? [[String: Any]] ?? [])
+        let posts: [UserProfileData.UserProfilePost] = rawPostsArray.compactMap { p in
             guard let postId = p["postId"] as? String,
                   let track = p["track"] as? [String: Any],
                   let title = track["title"] as? String,
@@ -116,6 +172,8 @@ class UserProfileViewModel: ObservableObject {
             locationCity: city,
             locationCountry: country,
             createdAt: json["createdAt"] as? String,
+            followersCount: json["followersCount"] as? Int ?? 0,
+            followingCount: json["followingCount"] as? Int ?? 0,
             posts: posts
         )
     }
@@ -125,49 +183,107 @@ class UserProfileViewModel: ObservableObject {
 
 struct UserProfileView: View {
     let handle: String
-    var isModal: Bool = false          // true when presented as sheet (e.g. invite deep link)
+    var isOwnProfile: Bool = false
+    var isModal: Bool = false
     var onDismiss: (() -> Void)? = nil
 
+    // Used only for other-user profiles
     @StateObject private var vm = UserProfileViewModel()
     @ObservedObject private var socialService = SocialService.shared
+    // Own-profile data comes directly from ProfileService — no separate ViewModel load
+    @ObservedObject private var profileService = ProfileService.shared
     @Environment(\.dismiss) private var dismiss
+
+    @State private var showingAvatarPicker = false
+    @State private var selectedPhoto: PhotosPickerItem? = nil
+    @ObservedObject private var locationService = LocationService.shared
+
+    // Resolve which data + loading state to show depending on profile mode
+    private var displayData: UserProfileData? {
+        isOwnProfile ? profileService.ownProfileData : vm.profileData
+    }
+    private var displayLoading: Bool {
+        isOwnProfile ? profileService.isLoading : vm.isLoading
+    }
+    private var displayError: String? {
+        isOwnProfile ? profileService.error : vm.error
+    }
 
     var body: some View {
         Group {
-            if vm.isLoading && vm.profileData == nil {
+            if displayLoading && displayData == nil {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let err = vm.error {
+            } else if let err = displayError {
                 VStack(spacing: 12) {
                     Image(systemName: "person.slash")
                         .font(.system(size: 48))
                         .foregroundColor(.secondary)
                     Text(err)
                         .foregroundColor(.secondary)
-                    Button("Retry") { Task { await vm.load(handle: handle) } }
+                    Button("Retry") {
+                        Task {
+                            if isOwnProfile { await profileService.loadMyProfile(force: true) }
+                            else { await vm.load(handle: handle, force: true) }
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let profile = vm.profileData {
+            } else if let profile = displayData {
                 profileContent(profile)
             } else {
-                // Initial state before .task fires — show spinner immediately
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .navigationTitle("@\(handle)")
+        .navigationTitle(isOwnProfile ? "Profile" : "@\(handle)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isOwnProfile {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SettingsView()) {
+                        Image(systemName: "gearshape")
+                    }
+                }
+            }
+        }
         .task {
-            let social = socialService
-            let model = vm
-            async let followingLoad: () = social.loadFollowingIfNeeded()
-            async let profileLoad: () = model.load(handle: handle)
-            _ = await (followingLoad, profileLoad)
+            if isOwnProfile {
+                // ProfileService.loadMyProfile() was already called by MainTabView.task.
+                // The in-flight guard collapses any concurrent call; if fresh data is already
+                // present, this returns immediately without a network request.
+                await profileService.loadMyProfile()
+                await captureLocationIfNeeded()
+            } else {
+                let social = socialService
+                let model = vm
+                async let followingLoad: () = social.loadFollowingIfNeeded()
+                async let profileLoad: () = model.load(handle: handle)
+                _ = await (followingLoad, profileLoad)
+            }
         }
         .refreshable {
-            await vm.load(handle: handle)
+            if isOwnProfile { await profileService.loadMyProfile(force: true) }
+            else { await vm.load(handle: handle, force: true) }
+        }
+        .photosPicker(
+            isPresented: $showingAvatarPicker,
+            selection: $selectedPhoto,
+            matching: .images
+        )
+        .onChange(of: selectedPhoto) { newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    await profileService.uploadAvatar(data)
+                    await profileService.loadMyProfile(force: true)
+                }
+                selectedPhoto = nil
+            }
         }
     }
+
+    // MARK: - Content
 
     @ViewBuilder
     private func profileContent(_ profile: UserProfileData) -> some View {
@@ -188,32 +304,51 @@ struct UserProfileView: View {
                     }
                     .padding(.top, 48)
                 } else {
-                    LazyVStack(spacing: 16) {
+                    LazyVStack(spacing: 0) {
                         ForEach(profile.posts) { post in
-                            postCard(post)
+                            FeedPostCell(group: post.asFeedGroup(userHandle: profile.handle), showUser: false)
+                                .padding(.vertical, 6)
                         }
                     }
-                    .padding()
+                    .padding(.horizontal, 0)
                 }
             }
         }
+        .environmentObject(FeedService.shared)
     }
+
+    // MARK: - Profile Header
 
     @ViewBuilder
     private func profileHeader(_ profile: UserProfileData) -> some View {
         VStack(spacing: 16) {
             // Avatar
             Group {
-                if let avatarUrl = profile.avatarUrl, let url = URL(string: avatarUrl) {
-                    AsyncImage(url: url) { image in
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        avatarPlaceholder(profile)
+                if isOwnProfile {
+                    // Tappable avatar with camera badge
+                    Button { showingAvatarPicker = true } label: {
+                        ZStack(alignment: .bottomTrailing) {
+                            avatarImage(profile, size: 80)
+                            if profileService.isUploadingAvatar {
+                                ProgressView()
+                                    .padding(4)
+                                    .background(Color(.systemBackground))
+                                    .clipShape(Circle())
+                                    .offset(x: 2, y: 2)
+                            } else {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(5)
+                                    .background(Color.blue)
+                                    .clipShape(Circle())
+                                    .offset(x: 2, y: 2)
+                            }
+                        }
                     }
-                    .frame(width: 80, height: 80)
-                    .clipShape(Circle())
+                    .buttonStyle(.plain)
                 } else {
-                    avatarPlaceholder(profile)
+                    avatarImage(profile, size: 80)
                 }
             }
 
@@ -229,6 +364,43 @@ struct UserProfileView: View {
                     .foregroundColor(.secondary)
             }
 
+            // Followers / Following counts
+            HStack(spacing: 32) {
+                NavigationLink(destination: FollowersView()) {
+                    VStack(spacing: 2) {
+                        Text("\(profile.followersCount)")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        Text("Followers")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                if isOwnProfile {
+                    NavigationLink(destination: FollowingView()) {
+                        VStack(spacing: 2) {
+                            Text("\(profile.followingCount)")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                            Text("Following")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    VStack(spacing: 2) {
+                        Text("\(profile.followingCount)")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        Text("Following")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
             // Location
             if let loc = profile.locationDisplay {
                 Label(loc, systemImage: "mappin.and.ellipse")
@@ -236,154 +408,136 @@ struct UserProfileView: View {
                     .foregroundColor(.secondary)
             }
 
-            // Bio
-            if let bio = profile.bio, !bio.isEmpty {
-                Text(bio)
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.primary)
-            }
-
-            // Follow / Unfollow — only show when authenticated and not viewing own profile
-            if socialService.isAuthenticated {
+            // Follow / Unfollow — only for other profiles when authenticated
+            if !isOwnProfile && socialService.isAuthenticated {
                 let following = socialService.isFollowing(handle: profile.handle)
-                Button {
-                    Task { await vm.toggleFollow(handle: profile.handle) }
-                } label: {
-                    if vm.isFollowLoading {
-                        ProgressView()
-                            .frame(minWidth: 120)
-                    } else {
-                        Text(following ? "Unfollow" : "Follow")
-                            .fontWeight(.medium)
-                            .frame(minWidth: 120)
+                VStack(spacing: 6) {
+                    Button {
+                        Task { await vm.toggleFollow(handle: profile.handle) }
+                    } label: {
+                        if vm.isFollowLoading {
+                            ProgressView()
+                                .frame(minWidth: 120)
+                        } else {
+                            Text(following ? "Unfollow" : "Follow")
+                                .fontWeight(.medium)
+                                .frame(minWidth: 120)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(following ? .red : .blue)
+                    .disabled(vm.isFollowLoading)
+
+                    if let err = vm.followError {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
                     }
                 }
-                .buttonStyle(.bordered)
-                .tint(following ? .red : .blue)
-                .disabled(vm.isFollowLoading)
             }
         }
     }
 
+    // MARK: - Avatar helpers
+
     @ViewBuilder
-    private func avatarPlaceholder(_ profile: UserProfileData) -> some View {
+    private func avatarImage(_ profile: UserProfileData, size: CGFloat) -> some View {
+        if let avatarUrl = profile.avatarUrl, let url = URL(string: avatarUrl) {
+            AsyncImage(url: url) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                avatarPlaceholder(profile, size: size)
+            }
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+        } else {
+            avatarPlaceholder(profile, size: size)
+        }
+    }
+
+    @ViewBuilder
+    private func avatarPlaceholder(_ profile: UserProfileData, size: CGFloat) -> some View {
         Circle()
             .fill(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
-            .frame(width: 80, height: 80)
+            .frame(width: size, height: size)
             .overlay(
                 Text(String(profile.name?.first ?? profile.handle.first ?? "?").uppercased())
                     .foregroundColor(.white)
-                    .font(.title)
+                    .font(size >= 60 ? .title : .subheadline)
                     .fontWeight(.medium)
             )
     }
 
-    @ViewBuilder
-    private func postCard(_ post: UserProfileData.UserProfilePost) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 16) {
-                // Album art
-                Group {
-                    if let artwork = post.track.artwork, let url = URL(string: artwork) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            artworkPlaceholder
-                        }
-                    } else {
-                        artworkPlaceholder
-                    }
+    // MARK: - Location capture (own profile only)
+
+    private func captureLocationIfNeeded() async {
+        guard profileService.profile?.location == nil else { return }
+
+        let status = locationService.authorizationStatus
+        if status == .notDetermined {
+            locationService.requestLocationPermission()
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+
+        guard locationService.authorizationStatus == .authorizedWhenInUse
+                || locationService.authorizationStatus == .authorizedAlways else { return }
+
+        locationService.getCurrentLocation()
+
+        for _ in 0..<10 {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            if locationService.currentLocation != nil { break }
+        }
+
+        guard let clLocation = locationService.currentLocation else { return }
+        guard let loc = await profileService.reverseGeocodeCurrentLocation(clLocation) else { return }
+        await profileService.updateProfile(location: loc)
+    }
+}
+
+// MARK: - Edit Bio Sheet
+
+struct EditBioSheet: View {
+    @Binding var bio: String
+    let onDismiss: (Bool) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Bio") {
+                    TextEditor(text: $bio)
+                        .frame(minHeight: 80)
                 }
-                .frame(width: 72, height: 72)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
-
-                // Track info
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(post.track.title)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .lineLimit(2)
-                    Text(post.track.artist)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                    if let album = post.track.album {
-                        Text(album)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                    Text(timeAgo(from: post.createdAt))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer(minLength: 0)
-
-                // Apple Music link
-                if let appleUrl = post.track.appleMusicUrl, let url = URL(string: appleUrl) {
-                    Link(destination: url) {
-                        Image(systemName: "arrow.up.forward.app")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                    }
+                Section {
+                    Text("\(bio.count)/160 characters")
+                        .font(.caption)
+                        .foregroundColor(bio.count > 160 ? .red : .secondary)
                 }
             }
-
-            // Comment
-            if let comment = post.comment, !comment.isEmpty {
-                Text(comment)
-                    .font(.body)
-                    .lineLimit(nil)
-            }
-
-            // Tags
-            if !post.tags.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(post.tags, id: \.self) { tag in
-                            Text("#\(tag)")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.12))
-                                .foregroundColor(.blue)
-                                .clipShape(Capsule())
-                        }
+            .navigationTitle("Edit Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onDismiss(false)
+                        dismiss()
                     }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onDismiss(true)
+                        dismiss()
+                    }
+                    .disabled(bio.count > 160)
                 }
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.001).background(.background))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
-    }
-
-    private var artworkPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 10)
-            .fill(LinearGradient(colors: [.gray.opacity(0.3), .gray.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            .overlay(
-                Image(systemName: "music.note")
-                    .font(.system(size: 28))
-                    .foregroundColor(.gray)
-            )
-    }
-
-    private func timeAgo(from dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return "" }
-        let interval = Date().timeIntervalSince(date)
-        if interval < 60 { return "now" }
-        if interval < 3600 { return "\(Int(interval / 60))m" }
-        if interval < 86400 { return "\(Int(interval / 3600))h" }
-        return "\(Int(interval / 86400))d"
     }
 }
+
+// MARK: - String helpers
 
 private extension String {
     var nonEmpty: String? { isEmpty ? nil : self }

@@ -5,6 +5,27 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const CORS = { "Access-Control-Allow-Origin": "*" };
 
+async function getFollowCounts(userId: string): Promise<{ followersCount: number; followingCount: number }> {
+  const [followersResult, followingResult] = await Promise.all([
+    ddb.send(new QueryCommand({
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "pk = :pk",
+      ExpressionAttributeValues: { ":pk": `user#${userId}#followers` },
+      Select: "COUNT",
+    })),
+    ddb.send(new QueryCommand({
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "pk = :pk",
+      ExpressionAttributeValues: { ":pk": `user#${userId}#following` },
+      Select: "COUNT",
+    })),
+  ]);
+  return {
+    followersCount: followersResult.Count ?? 0,
+    followingCount: followingResult.Count ?? 0,
+  };
+}
+
 export const getProfile = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const handle = event.pathParameters?.handle?.toLowerCase();
@@ -22,8 +43,8 @@ export const getProfile = async (event: APIGatewayProxyEvent): Promise<APIGatewa
     }
     const userId = handleRecord.Item.userId as string;
 
-    // Fetch profile + posts in parallel
-    const [profileResult, postsResult] = await Promise.all([
+    // Fetch profile, posts, and follow counts in parallel
+    const [profileResult, postsResult, followCounts] = await Promise.all([
       ddb.send(new GetCommand({
         TableName: process.env.TABLE_NAME,
         Key: { pk: `user#${userId}`, sk: "profile" },
@@ -38,6 +59,7 @@ export const getProfile = async (event: APIGatewayProxyEvent): Promise<APIGatewa
         ScanIndexForward: false,
         Limit: 20,
       })),
+      getFollowCounts(userId),
     ]);
 
     if (!profileResult.Item) {
@@ -67,6 +89,8 @@ export const getProfile = async (event: APIGatewayProxyEvent): Promise<APIGatewa
         avatarUrl: profile.avatarUrl ?? null,
         location: profile.location ?? null,
         createdAt: profile.createdAt ?? null,
+        followersCount: followCounts.followersCount,
+        followingCount: followCounts.followingCount,
         posts,
       }),
     };

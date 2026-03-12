@@ -5,7 +5,7 @@ import os.log
 actor ShareExtensionService {
     private let logger = Logger(subsystem: "net.wirestorm.scrobbler", category: "shareService")
     
-    func postTrack(track: Track, comment: String?, tags: [String], location: (lat: Double, lng: Double)?, userId: String, idToken: String, imageUrl: String? = nil, voiceMemoUrl: String? = nil) async throws {
+    func postTrack(track: Track, voiceMemoUrl: String?, transcript: String?, tags: [String], location: (lat: Double, lng: Double)?, userId: String, idToken: String) async throws {
         logger.info("🌐 Starting API call...")
         
         guard let url = URL(string: "\(Config.apiBaseUrl)/music/share") else {
@@ -28,16 +28,16 @@ actor ShareExtensionService {
                 "artist": track.artist,
                 "album": track.album ?? "",
                 "artworkUrl": track.artworkUrl ?? "",
-                "appleMusicUrl": track.appleMusicUrl ?? ""
+                "appleMusicUrl": track.appleMusicUrl ?? "",
+                "isrc": track.isrc ?? ""
             ],
-            "comment": comment ?? "",
             "tags": tags,
         ]
         if let location {
             payload["location"] = ["latitude": location.lat, "longitude": location.lng]
         }
-        if let imageUrl { payload["imageUrl"] = imageUrl }
         if let voiceMemoUrl { payload["voiceMemoUrl"] = voiceMemoUrl }
+        if let transcript { payload["transcript"] = transcript }
         
         logger.info("📦 Payload: \(payload)")
         

@@ -5,6 +5,7 @@ class SocialService: ObservableObject {
     static let shared = SocialService()
 
     @Published var following: [FollowedUser] = []
+    @Published var followers: [FollowedUser] = []
     @Published var isLoading = false
     @Published var error: String?
 
@@ -26,7 +27,10 @@ class SocialService: ObservableObject {
 
     func follow(handle: String) async {
         guard let url = URL(string: "\(apiBaseUrl)/follow") else { return }
-        guard let idToken = KeychainService.shared.get(key: "idToken") else { return }
+        guard let idToken = KeychainService.shared.get(key: "idToken") else {
+            print("❌ follow: no idToken in keychain")
+            return
+        }
 
         do {
             var request = URLRequest(url: url)
@@ -38,8 +42,13 @@ class SocialService: ObservableObject {
                 "action": "follow"
             ])
 
+            print("➡️ follow: POST /follow \(handle)")
             let (data, response) = try await URLSession.shared.data(for: request)
-            if let http = response as? HTTPURLResponse, http.statusCode == 200,
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let rawBody = String(data: data, encoding: .utf8) ?? "(unreadable)"
+            print("✅ follow: HTTP \(statusCode) — \(rawBody)")
+
+            if statusCode == 200,
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let userId = json["targetUserId"] as? String {
                 let newUser = FollowedUser(id: userId, handle: handle, followedAt: ISO8601DateFormatter().string(from: Date()))
@@ -47,8 +56,11 @@ class SocialService: ObservableObject {
                     following.append(newUser)
                 }
                 Analytics.follow(targetHandle: handle)
+            } else if statusCode != 200 {
+                self.error = "Follow failed (\(statusCode)): \(rawBody)"
             }
         } catch {
+            print("❌ follow: threw \(error)")
             self.error = error.localizedDescription
             Analytics.error("Follow failed", context: "SocialService.follow", underlyingError: error)
         }
@@ -56,7 +68,10 @@ class SocialService: ObservableObject {
 
     func unfollow(handle: String) async {
         guard let url = URL(string: "\(apiBaseUrl)/follow") else { return }
-        guard let idToken = KeychainService.shared.get(key: "idToken") else { return }
+        guard let idToken = KeychainService.shared.get(key: "idToken") else {
+            print("❌ unfollow: no idToken in keychain")
+            return
+        }
 
         do {
             var request = URLRequest(url: url)
@@ -68,12 +83,20 @@ class SocialService: ObservableObject {
                 "action": "unfollow"
             ])
 
-            let (_, response) = try await URLSession.shared.data(for: request)
-            if let http = response as? HTTPURLResponse, http.statusCode == 200 {
+            print("➡️ unfollow: POST /follow \(handle)")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            print("✅ unfollow: HTTP \(statusCode)")
+
+            if statusCode == 200 {
                 following.removeAll { $0.handle == handle }
                 Analytics.unfollow(targetHandle: handle)
+            } else {
+                let rawBody = String(data: data, encoding: .utf8) ?? "(unreadable)"
+                self.error = "Unfollow failed (\(statusCode)): \(rawBody)"
             }
         } catch {
+            print("❌ unfollow: threw \(error)")
             self.error = error.localizedDescription
             Analytics.error("Unfollow failed", context: "SocialService.unfollow", underlyingError: error)
         }
@@ -110,6 +133,47 @@ class SocialService: ObservableObject {
             }
 
             following = items.compactMap { item in
+                guard let handle = item["handle"] as? String,
+                      let userId = item["userId"] as? String else { return nil }
+                return FollowedUser(
+                    id: userId,
+                    handle: handle,
+                    followedAt: item["followedAt"] as? String ?? ""
+                )
+            }
+        } catch {
+            self.error = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+
+    func loadFollowers() async {
+        guard let url = URL(string: "\(apiBaseUrl)/me/followers") else { return }
+        guard let idToken = KeychainService.shared.get(key: "idToken") else { return }
+
+        isLoading = true
+        error = nil
+
+        do {
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+                NotificationCenter.default.post(name: .forceLogout, object: nil)
+                isLoading = false
+                return
+            }
+
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let items = json["followers"] as? [[String: Any]] else {
+                isLoading = false
+                return
+            }
+
+            followers = items.compactMap { item in
                 guard let handle = item["handle"] as? String,
                       let userId = item["userId"] as? String else { return nil }
                 return FollowedUser(

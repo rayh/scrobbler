@@ -1,24 +1,6 @@
 {
-  "originHash" : "43e7ebd5e303daef01a5f2724aac7c26fa321a5dd8fe3aa229ca3d4136e6475d",
+  "originHash" : "47cbe4ef2adc7155b834c1fb5ae451e260f9ef6ba19f0658c4fcafd3565fad48",
   "pins" : [
-    {
-      "identity" : "jot",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/mattmassicotte/Jot.git",
-      "state" : {
-        "revision" : "0826782b0489dc76249b5def7d69f38684e5cb7f",
-        "version" : "0.1.1"
-      }
-    },
-    {
-      "identity" : "oauthenticator",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/ChimeHQ/OAuthenticator.git",
-      "state" : {
-        "revision" : "835bc01596dfba77de92acfecf82c6f65105cb2d",
-        "version" : "0.7.2"
-      }
-    },
     {
       "identity" : "plcrashreporter",
       "kind" : "remoteSourceControl",

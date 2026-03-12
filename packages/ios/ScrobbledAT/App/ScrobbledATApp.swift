@@ -20,8 +20,31 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         PostHogSDK.shared.setup(config)
         return true
     }
-    
-    
+
+    /// Called for both foreground and background remote notifications.
+    /// Silent pushes (content-available: 1, no alert) arrive here when the app
+    /// is backgrounded/suspended — iOS gives us ~30 s to do background work.
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        let data = (userInfo["data"] as? [String: Any]) ?? (userInfo as? [String: Any]) ?? [:]
+        let type = data["type"] as? String
+
+        guard type == "feed_sync" else {
+            // Not a sync push — let normal notification handling proceed
+            completionHandler(.noData)
+            return
+        }
+
+        Task { @MainActor in
+            // Refresh feed data then sync the Apple Music playlist
+            await FeedService.shared.loadFeed(refresh: true)
+            await MusicSyncService.shared.syncFeedPlaylist()
+            completionHandler(.newData)
+        }
+    }
 }
 
 extension Notification.Name {

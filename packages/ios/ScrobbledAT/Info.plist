@@ -45,6 +45,12 @@
 	<string>We optionally store the location you're at when you share a track, so others can enjoy the location's soundtrack.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>You can leave voice notes for others explaining why you're sharing the track</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Selector transcribes your voice note to suggest tags for your share.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

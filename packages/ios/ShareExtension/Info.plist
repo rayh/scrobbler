@@ -20,6 +20,10 @@
 	<string>1</string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>We need access to Apple Music to get track information when you share songs</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Selector uses the microphone to let you record a voice note when sharing a track.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Selector transcribes your voice note to suggest tags for your share.</string>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionAttributes</key>
@@ -31,13 +35,6 @@
 		<string>com.apple.share-services</string>
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).ShareViewController</string>
-	</dict>
-	<key>EXAppExtensionAttributes</key>
-	<dict>
-		<key>EXExtensionPointIdentifier</key>
-		<string>com.apple.share-services</string>
-		<key>EXExtensionPointVersion</key>
-		<string>1.0</string>
 	</dict>
 </dict>
 </plist>

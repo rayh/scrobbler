@@ -3,6 +3,8 @@ import MusicKit
 
 @MainActor
 class MusicService: ObservableObject {
+    static let shared = MusicService()
+
     @Published var authorizationStatus: MusicAuthorization.Status = .notDetermined
     @Published var isLoading = false
     @Published var error: String?
@@ -23,26 +25,26 @@ class MusicService: ObservableObject {
             error = "Music access not authorized"
             return
         }
-        
+
         isLoading = true
         error = nil
-        
+
         do {
-            let trackData = [
-                "id": track.id.rawValue,
+            let trackData: [String: Any] = [
+                "id": track.id,
                 "title": track.title,
-                "artist": track.artistName,
-                "album": track.albumTitle ?? "",
-                "artwork": track.artwork?.url(width: 300, height: 300)?.absoluteString ?? "",
-                "appleMusicUrl": track.url?.absoluteString ?? ""
+                "artist": track.artist,
+                "album": track.album ?? "",
+                "artwork": track.artworkUrl ?? "",
+                "appleMusicUrl": track.appleMusicUrl ?? ""
             ]
-            
-            let requestBody = [
+
+            let requestBody: [String: Any] = [
                 "track": trackData,
                 "comment": comment,
                 "tags": tags
-            ] as [String: Any]
-            
+            ]
+
             let jsonData = try JSONSerialization.data(withJSONObject: requestBody)
             
             var request = URLRequest(url: URL(string: "\(apiBaseUrl)/music/share")!)
@@ -103,35 +105,26 @@ class MusicService: ObservableObject {
         }
     }
 
-    func searchTracks(query: String) async -> [Track] {
+    // Searches the Apple Music catalog. Returns MusicKit Song objects.
+    func searchTracks(query: String) async -> [Song] {
         guard authorizationStatus == .authorized else { return [] }
-        
         do {
-            var searchRequest = MusicCatalogSearchRequest(term: query, types: [Track.self])
+            var searchRequest = MusicCatalogSearchRequest(term: query, types: [Song.self])
             searchRequest.limit = 20
-            
             let searchResponse = try await searchRequest.response()
-            return Array(searchResponse.tracks)
+            return Array(searchResponse.songs)
         } catch {
             self.error = "Search failed: \(error.localizedDescription)"
             return []
         }
     }
-    
-    func getRecentlyPlayed() async -> [Track] {
+
+    func getRecentlyPlayed() async -> [Song] {
         guard authorizationStatus == .authorized else { return [] }
-        
         do {
-            let request = MusicRecentlyPlayedRequest()
+            let request = MusicRecentlyPlayedRequest<Song>()
             let response = try await request.response()
-            return response.items.compactMap { item in
-                switch item {
-                case .song(let track):
-                    return track
-                default:
-                    return nil
-                }
-            }
+            return Array(response.items)
         } catch {
             self.error = "Failed to get recently played: \(error.localizedDescription)"
             return []

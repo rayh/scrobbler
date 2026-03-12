@@ -2,7 +2,6 @@ import SwiftUI
 
 struct FollowingView: View {
     @StateObject private var service = SocialService.shared
-    @State private var unfollowingHandle: String? = nil
 
     var body: some View {
         List {
@@ -20,7 +19,7 @@ struct FollowingView: View {
             } else {
                 ForEach(service.following) { user in
                     NavigationLink(destination: UserProfileView(handle: user.handle)) {
-                        HStack {
+                        HStack(spacing: 12) {
                             Circle()
                                 .fill(LinearGradient(
                                     colors: [.blue, .purple],
@@ -37,20 +36,6 @@ struct FollowingView: View {
 
                             Text("@\(user.handle)")
                                 .font(.body)
-
-                            Spacer()
-
-                            if unfollowingHandle == user.handle {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            } else {
-                                Button("Unfollow") {
-                                    Task { await unfollow(user.handle) }
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                                .tint(.red)
-                            }
                         }
                         .padding(.vertical, 4)
                     }
@@ -60,11 +45,5 @@ struct FollowingView: View {
         .navigationTitle("Following")
         .task { await service.loadFollowing() }
         .refreshable { await service.loadFollowing() }
-    }
-
-    private func unfollow(_ handle: String) async {
-        unfollowingHandle = handle
-        await service.unfollow(handle: handle)
-        unfollowingHandle = nil
     }
 }
