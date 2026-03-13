@@ -1,7 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
-import { removeEndpoint } from "./push";
+import { removeEndpoint } from "./push.js";
 
 const client = new DynamoDBClient({});
 const ddb = DynamoDBDocumentClient.from(client);

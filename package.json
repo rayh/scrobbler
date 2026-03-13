@@ -8,7 +8,7 @@
     "deploy": "sst deploy",
     "remove": "sst remove",
     "console": "sst console",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b --noEmit",
     "test": "node test-api.cjs",
     "test:smoke": "npx tsx packages/functions/src/smoke-test.ts",
     "test:config": "node get-test-config.cjs",
