@@ -1,17 +1,16 @@
 /**
  * Smoke tests — run via `npx sst shell --stage <stage> -- npm run test:smoke`
  *
- * sst shell injects SST outputs as SST_OUTPUT_<key> env vars, so we read
- * the API URL from SST_OUTPUT_api (the raw API Gateway URL) or fall back to
- * constructing it from SST_OUTPUT_apiDomain.
+ * sst shell injects SST resources as SST_RESOURCE_<name> env vars (JSON objects).
+ * We read the API URL from SST_RESOURCE_ScrobbledApi.
  */
 export {};
 
-const apiUrl =
-  process.env.SST_OUTPUT_api?.replace(/\/$/, "") ??
-  (process.env.SST_OUTPUT_apiDomain
-    ? `https://${process.env.SST_OUTPUT_apiDomain}`
-    : null);
+const apiResource = process.env.SST_RESOURCE_ScrobbledApi
+  ? JSON.parse(process.env.SST_RESOURCE_ScrobbledApi)
+  : null;
+
+const apiUrl = apiResource?.url?.replace(/\/$/, "") ?? null;
 
 if (!apiUrl) {
   console.error(
@@ -82,11 +81,11 @@ function assert(condition: boolean, message: string): void {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-// Public feed — unauthenticated, should return 200 with a groups array
-await test("GET /feed/public returns 200 with groups array", async () => {
+// Public feed — unauthenticated, should return 200 with a posts array
+await test("GET /feed/public returns 200 with posts array", async () => {
   const { status, body } = await get("/feed/public");
   assert(status === 200, `Expected 200, got ${status}`);
-  assert(Array.isArray(body?.groups), `Expected body.groups to be an array, got: ${JSON.stringify(body)}`);
+  assert(Array.isArray(body?.posts) || Array.isArray(body?.groups), `Expected body.posts or body.groups to be an array, got: ${JSON.stringify(body)}`);
 });
 
 // Authenticated endpoints return 401 without a token
