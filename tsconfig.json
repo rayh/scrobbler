@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/functions" },
+    { "path": "./packages/landing" }
+  ]
+}
