@@ -10,7 +10,7 @@
     "console": "sst console",
     "typecheck": "tsc --noEmit",
     "test": "node test-api.cjs",
-    "test:smoke": "node smoke-test.cjs",
+    "test:smoke": "npx tsx packages/functions/src/smoke-test.ts",
     "test:config": "node get-test-config.cjs",
     "seed": "AWS_PROFILE=scrobbler npx sst shell -- node seed-data.mjs",
     "seed:clear": "AWS_PROFILE=scrobbler npx sst shell -- node clear-data.mjs",

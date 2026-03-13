@@ -9,8 +9,30 @@ concurrency:
   cancel-in-progress: false  # let deploy/remove finish cleanly
 
 jobs:
+  test:
+    name: Typecheck
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
   deploy:
     name: Deploy PR environment
+    needs: test
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     environment: pr-preview
@@ -18,7 +40,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-      pull-requests: write   # to post the environment URL as a comment
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -40,7 +62,6 @@ jobs:
           aws-region: eu-west-1
 
       - name: Deploy PR stage
-        id: deploy
         run: npx sst deploy --stage pr-${{ github.event.pull_request.number }}
 
       - name: Comment PR with environment URL
@@ -85,6 +106,38 @@ jobs:
                 body,
               });
             }
+
+  smoke-test:
+    name: Smoke test PR environment
+    needs: deploy
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Run smoke tests
+        run: npx sst shell --stage pr-${{ github.event.pull_request.number }} -- npm run test:smoke
 
   remove:
     name: Remove PR environment

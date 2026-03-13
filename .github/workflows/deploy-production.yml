@@ -10,13 +10,34 @@ concurrency:
   cancel-in-progress: false  # never cancel a production deploy mid-flight
 
 jobs:
+  test:
+    name: Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
   deploy:
     name: Deploy to production
+    needs: test
     runs-on: ubuntu-latest
     environment: production
 
     permissions:
-      id-token: write   # needed for OIDC
+      id-token: write
       contents: read
 
     steps:
@@ -40,3 +61,34 @@ jobs:
 
       - name: Deploy
         run: npx sst deploy --stage production
+
+  smoke-test:
+    name: Smoke test production
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Run smoke tests
+        run: npx sst shell --stage production -- npm run test:smoke
